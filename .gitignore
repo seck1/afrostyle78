@@ -1,0 +1,7 @@
+vendor/
+config/database.php
+config/mailer.php
+.env
+*.log
+uploads/
+.DS_Store

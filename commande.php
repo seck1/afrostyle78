@@ -1,0 +1,489 @@
+<?php
+ob_start();
+$pageTitle = 'Commander';
+require_once 'includes/header.php';
+require_once 'config/mailer.php';
+
+$cart = $_SESSION['cart'] ?? [];
+if (empty($cart)) { header('Location: panier.php'); exit; }
+
+$db = getDB();
+$errors = [];
+$subtotal = array_sum(array_map(fn($i) => $i['price'] * $i['quantity'], $cart));
+
+// Charger les zones de livraison actives
+$shippingZones = $db->query("SELECT * FROM shipping_zones WHERE active=1 ORDER BY sort_order, id")->fetchAll();
+$shippingById  = [];
+foreach ($shippingZones as $z) $shippingById[$z['id']] = $z;
+
+// Nombre total d'articles
+$totalQty = array_sum(array_column($cart, 'quantity'));
+
+// Zone sélectionnée
+$selectedZoneId = (int)($_POST['shipping_zone_id'] ?? $shippingZones[0]['id'] ?? 0);
+$selectedZone   = $shippingById[$selectedZoneId] ?? ($shippingZones[0] ?? null);
+
+// Calcul livraison selon palier quantité
+function calcShipping(array $zone, int $qty): float {
+    $base = (float)$zone['price'];
+    if ($base === 0.0) return 0;
+    if ($qty >= 6) return round($base * (1 + (float)$zone['surcharge_6_plus'] / 100));
+    if ($qty >= 3) return round($base * (1 + (float)$zone['surcharge_3_5'] / 100));
+    return $base;
+}
+$delivery = $selectedZone ? calcShipping($selectedZone, $totalQty) : 0;
+
+// Pré-remplir avec les infos du client connecté
+$prefill = ['first_name'=>'','last_name'=>'','email'=>'','phone'=>'','address'=>'','city'=>'Dakar'];
+if (!empty($_SESSION['customer_id'])) {
+    $stmt = $db->prepare("SELECT first_name, last_name, email, phone, address, city FROM customers WHERE id = ?");
+    $stmt->execute([$_SESSION['customer_id']]);
+    $cust = $stmt->fetch();
+    if ($cust) {
+        $prefill['first_name'] = $cust['first_name'];
+        $prefill['last_name']  = $cust['last_name'];
+        $prefill['email']      = $cust['email'];
+        $prefill['phone']      = $cust['phone'] ?? '';
+        $prefill['address']    = $cust['address'] ?? '';
+        $prefill['city']       = $cust['city'] ?: 'Dakar';
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $firstName = trim($_POST['first_name'] ?? '');
+    $lastName  = trim($_POST['last_name'] ?? '');
+    $email     = trim($_POST['email'] ?? '');
+    $phone     = trim($_POST['phone'] ?? '');
+    $address   = trim($_POST['address'] ?? '');
+    $city      = trim($_POST['city'] ?? '');
+    $deliveryMethod = $selectedZone ? $selectedZone['method_code'] : 'domicile';
+    $delivery       = $selectedZone ? calcShipping($selectedZone, $totalQty) : 0;
+    $paymentMethod  = $_POST['payment_method'] ?? 'cash';
+    $notes     = trim($_POST['notes'] ?? '');
+
+    if (!$firstName) $errors[] = 'Le prénom est requis.';
+    if (!$lastName)  $errors[] = 'Le nom est requis.';
+    if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Email invalide.';
+    if (!$phone)     $errors[] = 'Le téléphone est requis.';
+    if (!$address)   $errors[] = 'L\'adresse est requise.';
+    if (!$city)      $errors[] = 'La ville est requise.';
+
+    if (empty($errors)) {
+        try {
+            // Save or reuse customer
+            if (!empty($_SESSION['customer_id'])) {
+                $customerId = $_SESSION['customer_id'];
+                $db->prepare("UPDATE customers SET first_name=?, last_name=?, phone=?, address=?, city=? WHERE id=?")
+                   ->execute([$firstName, $lastName, $phone, $address, $city, $customerId]);
+            } else {
+                $existing = $db->prepare("SELECT id FROM customers WHERE email=?");
+                $existing->execute([$email]);
+                $existingCustomer = $existing->fetch();
+                if ($existingCustomer) {
+                    $customerId = $existingCustomer['id'];
+                    $db->prepare("UPDATE customers SET first_name=?, last_name=?, phone=?, address=?, city=? WHERE id=?")
+                       ->execute([$firstName, $lastName, $phone, $address, $city, $customerId]);
+                } else {
+                    $stmtCust = $db->prepare("INSERT INTO customers (first_name, last_name, email, phone, address, city) VALUES (?,?,?,?,?,?)");
+                    $stmtCust->execute([$firstName, $lastName, $email, $phone, $address, $city]);
+                    $customerId = $db->lastInsertId();
+                }
+            }
+
+            // Create order
+            $orderNumber = 'AFS-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
+            $total = $subtotal + $delivery;
+            $stmtOrder = $db->prepare("INSERT INTO orders (order_number, customer_id, total_amount, delivery_method, delivery_address, delivery_city, delivery_fee, payment_method, notes) VALUES (?,?,?,?,?,?,?,?,?)");
+            $stmtOrder->execute([$orderNumber, $customerId, $total, $deliveryMethod, $address, $city, $delivery, $paymentMethod, $notes]);
+            $orderId = $db->lastInsertId();
+
+            // Insert order items
+            foreach ($cart as $item) {
+                $stmtItem = $db->prepare("INSERT INTO order_items (order_id, product_id, product_name, size, quantity, unit_price, is_custom_measure) VALUES (?,?,?,?,?,?,?)");
+                $stmtItem->execute([$orderId, $item['product_id'], $item['name'], $item['size'], $item['quantity'], $item['price'], !empty($item['is_custom']) ? 1 : 0]);
+                $itemId = $db->lastInsertId();
+
+                if (!empty($item['is_custom']) && !empty($item['measurements'])) {
+                    $m = $item['measurements'];
+                    $stmtM = $db->prepare("INSERT INTO measurements (order_item_id, tour_poitrine, tour_taille, tour_hanches, longueur_epaule, longueur_totale, longueur_manche, tour_cou, tour_bras, notes) VALUES (?,?,?,?,?,?,?,?,?,?)");
+                    $stmtM->execute([$itemId,
+                        $m['tour_poitrine'] ?: null, $m['tour_taille'] ?: null, $m['tour_hanches'] ?: null,
+                        $m['longueur_epaule'] ?: null, $m['longueur_totale'] ?: null, $m['longueur_manche'] ?: null,
+                        $m['tour_cou'] ?: null, $m['tour_bras'] ?: null, $m['notes_mesures'] ?: null
+                    ]);
+                }
+            }
+
+            // Initial tracking
+            $db->prepare("INSERT INTO delivery_tracking (order_id, status, note) VALUES (?,?,?)")
+               ->execute([$orderId, 'pending', 'Commande reçue et en attente de validation.']);
+
+            // Email confirmation commande
+            $orderForEmail = [
+                'order_number'   => $orderNumber,
+                'total_amount'   => $total,
+                'delivery_fee'   => $delivery,
+                'delivery_city'  => $city,
+                'payment_method' => $paymentMethod,
+            ];
+            $cartItems = array_values($cart);
+            $itemsForEmail = array_map(fn($i) => [
+                'product_name' => $i['name'],
+                'size'         => $i['size'],
+                'quantity'     => $i['quantity'],
+                'unit_price'   => $i['price'],
+            ], $cartItems);
+            emailOrderConfirmation($email, $firstName, $orderForEmail, $itemsForEmail);
+
+            // Clear cart & redirect
+            $_SESSION['cart'] = [];
+            $_SESSION['last_order'] = ['number' => $orderNumber, 'total' => $total, 'name' => "$firstName $lastName"];
+
+            ob_end_clean();
+            header('Location: ' . SITE_URL . '/confirmation.php?order=' . $orderNumber);
+            exit;
+
+        } catch (PDOException $e) {
+            $errors[] = 'Erreur lors de la commande : ' . $e->getMessage();
+        }
+    }
+}
+
+$total = $subtotal + $delivery;
+?>
+
+<div class="container">
+    <div class="breadcrumb">
+        <a href="<?= SITE_URL ?>">Accueil</a><span>›</span>
+        <a href="panier.php">Panier</a><span>›</span>
+        <span class="current">Commander</span>
+    </div>
+    <h1 style="font-family:'Cormorant Garamond',serif; font-size:2.4rem; font-weight:400; margin-bottom:40px;">Finaliser la <em style="color:var(--gold);">commande</em></h1>
+
+    <?php if(!empty($errors)): ?>
+    <div class="alert alert-error"><?= implode('<br>', array_map('htmlspecialchars', $errors)) ?></div>
+    <?php endif; ?>
+
+    <form method="POST" action="">
+        <div class="checkout-grid">
+            <!-- FORM -->
+            <div>
+                <div class="form-section">
+                    <div class="form-section-title">Informations personnelles</div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Prénom *</label>
+                            <input type="text" name="first_name" value="<?= htmlspecialchars($_POST['first_name'] ?? $prefill['first_name']) ?>" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Nom *</label>
+                            <input type="text" name="last_name" value="<?= htmlspecialchars($_POST['last_name'] ?? $prefill['last_name']) ?>" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Email *</label>
+                            <input type="email" name="email" value="<?= htmlspecialchars($_POST['email'] ?? $prefill['email']) ?>" <?= !empty($_SESSION['customer_id']) ? 'readonly style="background:#f5f0e8;color:#888;cursor:not-allowed;"' : '' ?> required>
+                        </div>
+                        <div class="form-group">
+                            <label>Téléphone *</label>
+                            <input type="tel" name="phone" value="<?= htmlspecialchars($_POST['phone'] ?? $prefill['phone']) ?>" placeholder="+33 6 44 72 87 30" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="form-section-title">Mode de livraison</div>
+
+                    <!-- PAYS -->
+                    <div class="form-group" style="margin-bottom:20px;">
+                        <label>Votre pays *</label>
+                        <select id="country_select" name="country_code" onchange="filterShippingZones(this.value)" style="width:100%;padding:14px 16px;border:1.5px solid #e0d8ce;font-family:inherit;font-size:1rem;background:#fff;outline:none;">
+                            <optgroup label="🇸🇳 Sénégal">
+                                <option value="SN" <?= ($_POST['country_code']??'SN')==='SN'?'selected':'' ?>>🇸🇳 Sénégal</option>
+                            </optgroup>
+                            <optgroup label="🌍 Afrique">
+                                <option value="CI" <?= ($_POST['country_code']??'')==='CI'?'selected':'' ?>>🇨🇮 Côte d'Ivoire</option>
+                                <option value="ML" <?= ($_POST['country_code']??'')==='ML'?'selected':'' ?>>🇲🇱 Mali</option>
+                                <option value="GN" <?= ($_POST['country_code']??'')==='GN'?'selected':'' ?>>🇬🇳 Guinée</option>
+                                <option value="MR" <?= ($_POST['country_code']??'')==='MR'?'selected':'' ?>>🇲🇷 Mauritanie</option>
+                                <option value="GH" <?= ($_POST['country_code']??'')==='GH'?'selected':'' ?>>🇬🇭 Ghana</option>
+                                <option value="CM" <?= ($_POST['country_code']??'')==='CM'?'selected':'' ?>>🇨🇲 Cameroun</option>
+                            </optgroup>
+                            <optgroup label="🇪🇺 Europe">
+                                <option value="FR" <?= ($_POST['country_code']??'')==='FR'?'selected':'' ?>>🇫🇷 France</option>
+                                <option value="BE" <?= ($_POST['country_code']??'')==='BE'?'selected':'' ?>>🇧🇪 Belgique</option>
+                                <option value="CH" <?= ($_POST['country_code']??'')==='CH'?'selected':'' ?>>🇨🇭 Suisse</option>
+                                <option value="DE" <?= ($_POST['country_code']??'')==='DE'?'selected':'' ?>>🇩🇪 Allemagne</option>
+                                <option value="GB" <?= ($_POST['country_code']??'')==='GB'?'selected':'' ?>>🇬🇧 Royaume-Uni</option>
+                                <option value="ES" <?= ($_POST['country_code']??'')==='ES'?'selected':'' ?>>🇪🇸 Espagne</option>
+                                <option value="IT" <?= ($_POST['country_code']??'')==='IT'?'selected':'' ?>>🇮🇹 Italie</option>
+                            </optgroup>
+                            <optgroup label="🌎 Amérique">
+                                <option value="US" <?= ($_POST['country_code']??'')==='US'?'selected':'' ?>>🇺🇸 États-Unis</option>
+                                <option value="CA" <?= ($_POST['country_code']??'')==='CA'?'selected':'' ?>>🇨🇦 Canada</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                    <!-- OPTIONS LIVRAISON DYNAMIQUES -->
+                    <div id="shipping-options">
+                    <?php foreach ($shippingZones as $z):
+                        $typeIcon = ['local'=>'🏪','national'=>'🚚','international'=>'✈️'][$z['zone_type']] ?? '📦';
+                        $isSelected = $z['id'] === $selectedZoneId;
+                        $countries = $z['countries'] ? array_map('trim', explode(',', $z['countries'])) : [];
+                        $dataCountries = $z['countries'] ? htmlspecialchars($z['countries']) : 'ALL';
+                    ?>
+                    <div class="delivery-option shipping-opt"
+                         data-countries="<?= $dataCountries ?>"
+                         data-price="<?= $z['price'] ?>"
+                         data-zone-id="<?= $z['id'] ?>">
+                        <input type="radio" name="shipping_zone_id"
+                               id="zone_<?= $z['id'] ?>"
+                               value="<?= $z['id'] ?>"
+                               <?= $isSelected ? 'checked' : '' ?>
+                               onchange="updateDeliveryPrice(<?= $z['id'] ?>)">
+                        <label for="zone_<?= $z['id'] ?>">
+                            <strong><?= $typeIcon ?> <?= htmlspecialchars($z['method']) ?></strong>
+                            <span>
+                                <?= $z['price'] > 0 ? number_format($z['price'],0,',',' ').' FCFA' : '<strong style="color:#38a169;">Gratuit</strong>' ?>
+                                <?php if($z['delay']): ?> — <?= htmlspecialchars($z['delay']) ?><?php endif; ?>
+                                <?php if($z['description']): ?><br><small style="color:var(--text-muted)"><?= htmlspecialchars($z['description']) ?></small><?php endif; ?>
+                            </span>
+                        </label>
+                    </div>
+                    <?php endforeach; ?>
+                    </div>
+                    <div id="no-shipping" style="display:none; padding:16px; background:#fff8f0; border:1px solid #f6ad55; color:#c05621; font-size:0.95rem;">
+                        ⚠ Aucune option de livraison disponible pour ce pays. Contactez-nous au +33 6 44 72 87 30.
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <div class="form-section-title">Adresse de livraison</div>
+                    <div class="form-grid">
+                        <div class="form-group full">
+                            <label>Adresse complète *</label>
+                            <input type="text" name="address" value="<?= htmlspecialchars($_POST['address'] ?? $prefill['address']) ?>" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Ville *</label>
+                            <input type="text" name="city" value="<?= htmlspecialchars($_POST['city'] ?? $prefill['city']) ?>" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Notes de livraison</label>
+                            <input type="text" name="delivery_notes" placeholder="Quartier, repère...">
+                        </div>
+                        <div class="form-group full">
+                            <label>Commentaire sur la commande</label>
+                            <textarea name="notes" rows="3" placeholder="Couleur souhaitée, occasion spéciale..."><?= htmlspecialchars($_POST['notes'] ?? '') ?></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MODE DE PAIEMENT -->
+                <div class="form-section">
+                    <div class="form-section-title">Mode de paiement</div>
+                    <div class="payment-options">
+
+                        <div class="payment-option">
+                            <input type="radio" name="payment_method" id="pay_cash" value="cash" checked onchange="showPaymentInfo('cash')">
+                            <label for="pay_cash">
+                                <span class="pay-icon">💵</span>
+                                <span class="pay-details">
+                                    <strong>Paiement à la livraison</strong>
+                                    <small>Espèces à la réception de votre commande</small>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="payment-option">
+                            <input type="radio" name="payment_method" id="pay_wave" value="wave" onchange="showPaymentInfo('wave')">
+                            <label for="pay_wave">
+                                <span class="pay-icon">📱</span>
+                                <span class="pay-details">
+                                    <strong>Wave</strong>
+                                    <small>Mobile Money — Paiement instantané</small>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="payment-option">
+                            <input type="radio" name="payment_method" id="pay_orange" value="orange_money" onchange="showPaymentInfo('orange_money')">
+                            <label for="pay_orange">
+                                <span class="pay-icon">📱</span>
+                                <span class="pay-details">
+                                    <strong>Orange Money</strong>
+                                    <small>Mobile Money Orange</small>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="payment-option">
+                            <input type="radio" name="payment_method" id="pay_bank" value="virement" onchange="showPaymentInfo('virement')">
+                            <label for="pay_bank">
+                                <span class="pay-icon">🏦</span>
+                                <span class="pay-details">
+                                    <strong>Virement bancaire</strong>
+                                    <small>Paiement par virement — sous 48h</small>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="payment-option">
+                            <input type="radio" name="payment_method" id="pay_card" value="carte" onchange="showPaymentInfo('carte')">
+                            <label for="pay_card">
+                                <span class="pay-icon">💳</span>
+                                <span class="pay-details">
+                                    <strong>Carte bancaire</strong>
+                                    <small>Visa / Mastercard — Paiement sécurisé</small>
+                                </span>
+                            </label>
+                        </div>
+
+                    </div>
+
+                    <!-- INSTRUCTIONS PAIEMENT -->
+                    <div id="pay-info-cash" class="pay-info" style="display:block;">
+                        <p>✅ Aucune action requise. Vous payez en espèces à la réception de votre commande. Notre livreur vous contactera avant la livraison.</p>
+                    </div>
+                    <div id="pay-info-wave" class="pay-info" style="display:none;">
+                        <p>📱 Envoyez le montant total via <strong>Wave</strong> au numéro :</p>
+                        <div class="pay-number">+33 6 44 72 87 30</div>
+                        <p>Indiquez votre <strong>nom + numéro de commande</strong> dans la note Wave. Envoyez-nous la capture d'écran par WhatsApp.</p>
+                    </div>
+                    <div id="pay-info-orange_money" class="pay-info" style="display:none;">
+                        <p>📱 Envoyez le montant total via <strong>Orange Money</strong> au numéro :</p>
+                        <div class="pay-number">+33 6 44 72 87 30</div>
+                        <p>Indiquez votre <strong>nom + numéro de commande</strong> dans la note. Envoyez-nous la capture d'écran par WhatsApp.</p>
+                    </div>
+                    <div id="pay-info-virement" class="pay-info" style="display:none;">
+                        <p>🏦 Effectuez un virement bancaire vers le compte :</p>
+                        <div class="pay-bank-details">
+                            <div><span>Banque</span><strong>CBAO Dakar</strong></div>
+                            <div><span>Titulaire</span><strong>AfroStyle Atelier</strong></div>
+                            <div><span>IBAN/RIB</span><strong>SN12 0000 0000 0000 0000 0000</strong></div>
+                            <div><span>Référence</span><strong>Votre nom + numéro de commande</strong></div>
+                        </div>
+                        <p style="margin-top:12px;">La commande sera validée à réception du virement (1–2 jours ouvrables).</p>
+                    </div>
+                    <div id="pay-info-carte" class="pay-info" style="display:none;">
+                        <p>💳 Après confirmation de votre commande, vous recevrez un <strong>lien de paiement sécurisé</strong> par email ou WhatsApp pour régler par carte Visa/Mastercard.</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- ORDER SUMMARY -->
+            <div>
+                <div class="cart-summary" style="position:sticky; top:100px;">
+                    <div style="font-size:0.72rem; font-weight:700; letter-spacing:0.15em; text-transform:uppercase; color:var(--gold); margin-bottom:24px; padding-bottom:12px; border-bottom:1px solid rgba(200,146,26,0.2);">Ma commande</div>
+                    <?php foreach($cart as $item): ?>
+                    <div style="display:flex; gap:12px; margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid rgba(0,0,0,0.06);">
+                        <div style="width:56px; height:68px; background:var(--cream-2); overflow:hidden; flex-shrink:0;">
+                            <?php if($item['image']): ?>
+                            <img src="<?= UPLOADS_URL . htmlspecialchars($item['image']) ?>" style="width:100%; height:100%; object-fit:cover;">
+                            <?php else: ?>
+                            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;">👗</div>
+                            <?php endif; ?>
+                        </div>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-size:0.82rem; font-weight:600; line-height:1.3;"><?= htmlspecialchars($item['name']) ?></div>
+                            <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">Taille: <?= htmlspecialchars($item['size']) ?> · Qté: <?= $item['quantity'] ?></div>
+                            <?php if($item['is_custom']): ?><div style="font-size:0.68rem; color:var(--gold); margin-top:2px;">Sur-mesure ✓</div><?php endif; ?>
+                        </div>
+                        <div style="font-size:0.85rem; font-weight:700; white-space:nowrap;"><?= number_format($item['price'] * $item['quantity'], 0, ',', ' ') ?></div>
+                    </div>
+                    <?php endforeach; ?>
+                    <div class="summary-row"><span>Sous-total</span><span><?= number_format($subtotal, 0, ',', ' ') ?> <?= CURRENCY ?></span></div>
+                    <div class="summary-row"><span>Livraison</span><span id="summary-delivery"><?= $delivery > 0 ? number_format($delivery, 0, ',', ' ').' '.CURRENCY : '<span style="color:#38a169;">Gratuit</span>' ?></span></div>
+                    <div class="summary-row summary-total" style="border-bottom:none; padding-top:16px; margin-top:8px; border-top:2px solid var(--dark);">
+                        <span>Total</span><span id="summary-total"><?= number_format($total, 0, ',', ' ') ?> <?= CURRENCY ?></span>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg btn-full" style="margin-top:24px;">
+                        ✓ Confirmer la commande
+                    </button>
+                    <div style="margin-top:12px; font-size:0.7rem; color:var(--text-muted); text-align:center;">
+                        Vous serez contacté par téléphone pour confirmer et organiser le paiement.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+const SUBTOTAL  = <?= $subtotal ?>;
+const TOTAL_QTY = <?= $totalQty ?>;
+const ZONES     = <?= json_encode(array_values($shippingZones)) ?>;
+
+function calcShippingJS(zone) {
+    const base = parseFloat(zone.price);
+    if (base === 0) return 0;
+    if (TOTAL_QTY >= 6) return Math.round(base * (1 + parseFloat(zone.surcharge_6_plus) / 100));
+    if (TOTAL_QTY >= 3) return Math.round(base * (1 + parseFloat(zone.surcharge_3_5) / 100));
+    return base;
+}
+
+function updateDeliveryPrice(zoneId) {
+    const zone = ZONES.find(z => z.id == zoneId);
+    if (!zone) return;
+    const price    = calcShippingJS(zone);
+    const delivery = document.getElementById('summary-delivery');
+    const total    = document.getElementById('summary-total');
+
+    if (price > 0) {
+        let label = price.toLocaleString('fr-FR') + ' FCFA';
+        if (TOTAL_QTY >= 6 && parseFloat(zone.price) > 0)
+            label += ' <small style="color:var(--muted)">(+' + zone.surcharge_6_plus + '%, 6+ art.)</small>';
+        else if (TOTAL_QTY >= 3 && parseFloat(zone.price) > 0)
+            label += ' <small style="color:var(--muted)">(+' + zone.surcharge_3_5 + '%, 3-5 art.)</small>';
+        delivery.innerHTML = label;
+    } else {
+        delivery.innerHTML = '<span style="color:#38a169;">Gratuit</span>';
+    }
+    total.textContent = (SUBTOTAL + price).toLocaleString('fr-FR') + ' FCFA';
+}
+
+function filterShippingZones(countryCode) {
+    const opts = document.querySelectorAll('.shipping-opt');
+    let visible = 0, firstVisible = null;
+
+    opts.forEach(opt => {
+        const zoneId   = opt.dataset.zoneId;
+        const zone     = ZONES.find(z => z.id == zoneId);
+        const zoneType = zone?.zone_type;
+        let show = false;
+        if (zoneType === 'local' || zoneType === 'national') {
+            show = (countryCode === 'SN');
+        } else {
+            show = (countryCode !== 'SN');
+        }
+        opt.style.display = show ? '' : 'none';
+        if (show) { visible++; if (!firstVisible) firstVisible = opt; }
+    });
+
+    if (firstVisible) {
+        const radio = firstVisible.querySelector('input[type=radio]');
+        radio.checked = true;
+        updateDeliveryPrice(firstVisible.dataset.zoneId);
+    }
+    document.getElementById('no-shipping').style.display = visible === 0 ? 'block' : 'none';
+}
+
+function showPaymentInfo(method) {
+    document.querySelectorAll('.pay-info').forEach(el => el.style.display = 'none');
+    const el = document.getElementById('pay-info-' + method);
+    if (el) el.style.display = 'block';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    filterShippingZones(document.getElementById('country_select').value);
+    document.querySelectorAll('.shipping-opt input[type=radio]').forEach(r => {
+        r.addEventListener('change', () => updateDeliveryPrice(r.value));
+    });
+    // Init paiement
+    const checkedPay = document.querySelector('input[name=payment_method]:checked');
+    if (checkedPay) showPaymentInfo(checkedPay.value);
+});
+</script>
+
+<?php require_once 'includes/footer.php'; ?>
