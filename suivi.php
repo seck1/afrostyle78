@@ -19,7 +19,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['order'])) {
         $order = $stmt->fetch();
 
         if ($order) {
-            if ($email && strtolower($order['email']) !== strtolower($email)) {
+            // Email obligatoire pour accéder au suivi (sauf client connecté)
+            $isOwner = !empty($_SESSION['customer_id']) && (int)$_SESSION['customer_id'] === (int)$order['customer_id'];
+            if (!$isOwner && strtolower($order['email']) !== strtolower($email)) {
                 $order = null;
                 $error = 'Email incorrect pour cette commande.';
             } else {

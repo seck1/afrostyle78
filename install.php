@@ -1,3 +1,10 @@
+<?php
+// Bloquer l'accès web en production — n'exécuter qu'en CLI
+if (php_sapi_name() !== 'cli' && !defined('ALLOW_INSTALL')) {
+    http_response_code(403);
+    exit('Accès interdit.');
+}
+?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>

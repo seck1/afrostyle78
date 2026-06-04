@@ -4,11 +4,18 @@ $db  = getDB();
 $msg = '';
 
 // Sauvegarder
+$allowedKeys = [
+    'stripe_publishable_key','stripe_secret_key','stripe_mode','stripe_currency','stripe_fcfa_to_eur',
+    'site_name','site_phone','site_email','site_address',
+    'wave_number','orange_money_number','bank_name','bank_iban','bank_owner',
+];
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    foreach ($_POST as $key => $value) {
-        if ($key === 'csrf') continue;
-        $stmt = $db->prepare("UPDATE settings SET setting_value=? WHERE setting_key=?");
-        $stmt->execute([trim($value), $key]);
+    foreach ($allowedKeys as $key) {
+        if (isset($_POST[$key])) {
+            $stmt = $db->prepare("UPDATE settings SET setting_value=? WHERE setting_key=?");
+            $stmt->execute([trim($_POST[$key]), $key]);
+        }
     }
     // Upload photo "Tout voir"
     if (isset($_FILES['cat_all_image']) && $_FILES['cat_all_image']['size'] > 0 && $_FILES['cat_all_image']['error'] === UPLOAD_ERR_OK) {

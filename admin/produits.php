@@ -52,9 +52,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Handle image principale upload
     $imageName = $_POST['existing_image'] ?? '';
     if (isset($_FILES['image']) && $_FILES['image']['size'] > 0 && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-        $ext = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
-        $imageName = uniqid('img_', true) . '.' . $ext;
-        if (!move_uploaded_file($_FILES['image']['tmp_name'], UPLOADS_DIR . $imageName)) {
+        $allowedExt  = ['jpg','jpeg','png','webp','gif'];
+        $allowedMime = ['image/jpeg','image/png','image/webp','image/gif'];
+        $ext  = strtolower(pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION));
+        $mime = mime_content_type($_FILES['image']['tmp_name']);
+        if (in_array($ext, $allowedExt, true) && in_array($mime, $allowedMime, true) && getimagesize($_FILES['image']['tmp_name']) !== false) {
+            $imageName = uniqid('img_', true) . '.' . $ext;
+            if (!move_uploaded_file($_FILES['image']['tmp_name'], UPLOADS_DIR . $imageName)) {
+                $imageName = $_POST['existing_image'] ?? '';
+            }
+        } else {
+            $msg = '<div class="alert alert-error">⚠ Format d\'image non autorisé. Utilisez JPG, PNG ou WebP.</div>';
             $imageName = $_POST['existing_image'] ?? '';
         }
     }

@@ -5,28 +5,32 @@ require_once 'vendor/autoload.php';
 
 header('Content-Type: application/json');
 
+// Vérifier session client
+if (empty($_SESSION['customer_id'])) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Vous devez être connecté pour payer.']);
+    exit;
+}
+
 $db       = getDB();
 $settings = $db->query("SELECT setting_key, setting_value FROM settings WHERE setting_group='stripe'")->fetchAll(PDO::FETCH_KEY_PAIR);
 
-$secretKey   = $settings['stripe_secret_key'] ?? '';
-$currency    = $settings['stripe_currency'] ?? 'eur';
-$rate        = (float)($settings['stripe_fcfa_to_eur'] ?? 0.00152);
-$mode        = $settings['stripe_mode'] ?? 'test';
+$secretKey = $settings['stripe_secret_key'] ?? '';
+$currency  = $settings['stripe_currency'] ?? 'eur';
+$rate      = (float)($settings['stripe_fcfa_to_eur'] ?? 0.00152);
 
 if (!$secretKey) {
     echo json_encode(['error' => 'Stripe non configuré. Ajoutez vos clés dans les paramètres admin.']);
     exit;
 }
 
-$orderNumber = $_POST['order_number'] ?? '';
-$totalFcfa   = (float)($_POST['total_fcfa'] ?? 0);
-
-if (!$orderNumber || $totalFcfa <= 0) {
-    echo json_encode(['error' => 'Données de commande invalides.']);
+$orderNumber = trim($_POST['order_number'] ?? '');
+if (!$orderNumber) {
+    echo json_encode(['error' => 'Numéro de commande manquant.']);
     exit;
 }
 
-// Récupérer la commande
+// Récupérer la commande depuis la DB — ignorer tout montant POST
 $stmt = $db->prepare("SELECT o.*, c.email, c.first_name, c.last_name FROM orders o JOIN customers c ON o.customer_id=c.id WHERE o.order_number=?");
 $stmt->execute([$orderNumber]);
 $order = $stmt->fetch();
@@ -36,11 +40,25 @@ if (!$order) {
     exit;
 }
 
-// Convertir FCFA → EUR (Stripe attend des centimes)
-$amountEur    = round($totalFcfa * $rate, 2);
-$amountCents  = (int)round($amountEur * 100);
+// Vérifier que la commande appartient au client connecté
+if ((int)$order['customer_id'] !== (int)$_SESSION['customer_id']) {
+    http_response_code(403);
+    echo json_encode(['error' => 'Accès refusé.']);
+    exit;
+}
 
-if ($amountCents < 50) { // minimum Stripe = 0.50€
+// Vérifier que la commande n'est pas déjà payée
+if ($order['payment_status'] === 'paid') {
+    echo json_encode(['error' => 'Cette commande est déjà payée.']);
+    exit;
+}
+
+// Montant depuis la DB uniquement
+$totalFcfa   = (float)$order['total_amount'];
+$amountEur   = round($totalFcfa * $rate, 2);
+$amountCents = (int)round($amountEur * 100);
+
+if ($amountCents < 50) {
     echo json_encode(['error' => 'Montant trop faible pour Stripe (minimum 0.50€).']);
     exit;
 }
@@ -62,11 +80,11 @@ try {
             ],
             'quantity' => 1,
         ]],
-        'mode'          => 'payment',
-        'customer_email'=> $order['email'],
-        'success_url'   => SITE_URL . '/stripe-success.php?order=' . $orderNumber . '&session_id={CHECKOUT_SESSION_ID}',
-        'cancel_url'    => SITE_URL . '/confirmation.php?order=' . $orderNumber . '&payment=cancelled',
-        'metadata'      => [
+        'mode'           => 'payment',
+        'customer_email' => $order['email'],
+        'success_url'    => SITE_URL . '/stripe-success.php?order=' . urlencode($orderNumber) . '&session_id={CHECKOUT_SESSION_ID}',
+        'cancel_url'     => SITE_URL . '/confirmation.php?order=' . urlencode($orderNumber) . '&payment=cancelled',
+        'metadata'       => [
             'order_number' => $orderNumber,
             'order_id'     => $order['id'],
             'fcfa_amount'  => $totalFcfa,
