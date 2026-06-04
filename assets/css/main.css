@@ -1702,9 +1702,9 @@ body {
   }
 
   .cat-card {
-    min-width: 48vw;
-    width: 48vw;
-    height: 68vw;
+    min-width: 38vw;
+    width: 38vw;
+    height: 58vw;
     padding: 0;
     flex-shrink: 0;
     flex-grow: 0;
