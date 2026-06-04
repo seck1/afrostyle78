@@ -91,7 +91,7 @@ $allStatuses = ['pending','confirmed','in_production','shipped','delivered'];
                 <div style="background:<?= $s['color'] ?>22; color:<?= $s['color'] ?>; padding:6px 16px; font-size:0.75rem; font-weight:700; letter-spacing:0.1em; text-transform:uppercase;">
                     <?= $s['icon'] ?> <?= $s['label'] ?>
                 </div>
-                <div style="font-size:0.8rem; color:var(--text-muted); margin-top:8px;">Total: <strong><?= number_format($order['total_amount'], 0, ',', ' ') ?> FCFA</strong></div>
+                <div style="font-size:0.8rem; color:var(--text-muted); margin-top:8px;">Total: <strong><?= number_format($order['total_amount'], 0, ',', ' ') ?> €</strong></div>
             </div>
         </div>
 
@@ -145,7 +145,7 @@ $allStatuses = ['pending','confirmed','in_production','shipped','delivered'];
                 <div style="font-weight:600; font-size:0.88rem;"><?= htmlspecialchars($oi['product_name']) ?></div>
                 <div style="font-size:0.72rem; color:var(--text-muted);">Taille: <?= htmlspecialchars($oi['size']) ?> · Qté: <?= $oi['quantity'] ?><?= $oi['is_custom_measure'] ? ' · <span style="color:var(--gold);">Sur-mesure</span>' : '' ?></div>
             </div>
-            <div style="font-weight:700; font-size:0.9rem;"><?= number_format($oi['unit_price'] * $oi['quantity'], 0, ',', ' ') ?> FCFA</div>
+            <div style="font-weight:700; font-size:0.9rem;"><?= number_format($oi['unit_price'] * $oi['quantity'], 0, ',', ' ') ?> €</div>
         </div>
         <?php endforeach; ?>
     </div>

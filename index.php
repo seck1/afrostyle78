@@ -23,9 +23,9 @@ $catAllImage = $db->query("SELECT setting_value FROM settings WHERE setting_key=
                 <em>réinventée</em>
             </h1>
             <p class="hero-subtitle" style="font-size:1.1rem; max-width:480px; line-height:1.75; margin-bottom:32px;">Le chic & l'élégance du sur-mesure africain. Spécialiste Mariages & Cérémonies. Livraison France & International.</p>
-            <div class="hero-actions" style="display:flex; flex-direction:column; gap:12px; align-items:flex-start;">
-                <a href="boutique.php" class="btn btn-primary btn-lg" style="width:100%; justify-content:center;">Explorer les collections</a>
-                <a href="sur-mesure.php" class="btn btn-outline" style="width:auto; padding:10px 32px; font-size:0.9rem; border-color:rgba(253,246,236,0.3); align-self:center;">Sur-Mesure</a>
+            <div class="hero-actions">
+                <a href="boutique.php" class="btn btn-primary btn-lg"><span class="btn-text-full">Explorer les collections</span><span class="btn-text-short">Collections</span></a>
+                <a href="sur-mesure.php" class="btn btn-outline" style="border-color:rgba(253,246,236,0.3);">Sur-Mesure</a>
             </div>
             <div class="hero-stat-grid">
                 <div class="hero-stat">
@@ -77,6 +77,7 @@ $catAllImage = $db->query("SELECT setting_value FROM settings WHERE setting_key=
             <h2 class="section-title" style="color:var(--cream);">Explorez par <em>catégorie</em></h2>
         </div>
     </div>
+    <div class="categories-scroll-outer">
     <div class="categories-scroll">
         <a href="boutique.php" class="cat-card" style="border-color:var(--gold);">
             <?php if ($catAllImage): ?>
@@ -103,6 +104,194 @@ $catAllImage = $db->query("SELECT setting_value FROM settings WHERE setting_key=
         </a>
         <?php endforeach; ?>
     </div>
+    </div><!-- /.categories-scroll-outer -->
+
+<script>
+(function() {
+  /*
+   * Carousel auto-scroll — iOS Safari compatible
+   * Stratégie : translateX sur le strip, jamais scrollLeft.
+   * Safari annule scrollLeft quand scroll-snap est actif ET quand
+   * html/body ont overflow-x:hidden. translateX n'est affecté
+   * par aucun de ces deux problèmes.
+   *
+   * Boucle seamless : les cartes originales sont clonées une fois.
+   * L'animation avance de 0 à -stripHalfW puis saute silencieusement
+   * à 0 (les clones reprennent exactement là où les originaux s'arrêtent).
+   */
+
+  function init() {
+    var strip  = document.querySelector('.categories-scroll');
+    var outer  = document.querySelector('.categories-scroll-outer');
+    if (!strip || !outer) return;
+
+    /* ── 1. Clones pour la boucle seamless ── */
+    var originals = Array.prototype.slice.call(strip.querySelectorAll('.cat-card'));
+    originals.forEach(function(card) {
+      var clone = card.cloneNode(true);
+      clone.setAttribute('aria-hidden', 'true');
+      clone.setAttribute('tabindex', '-1');
+      clone.addEventListener('click', function(e) { e.preventDefault(); });
+      strip.appendChild(clone);
+    });
+
+    /* ── 2. État ── */
+    var PX_PER_SEC = 55;        // vitesse en pixels/seconde
+    var currentX   = 0;         // translateX courant (valeur négative)
+    var halfW      = 0;         // largeur d'un jeu de cartes (recalculée)
+    var paused     = false;
+    var lastTime   = null;
+    var resumeTimer = null;
+    var rafId       = null;
+
+    /* ── 3. Calcul de halfW après layout ── */
+    function measureHalf() {
+      /* La moitié = largeur totale du strip / 2
+         (originaux + clones sont identiques) */
+      halfW = strip.scrollWidth / 2;
+      /* Fallback si scrollWidth n'est pas encore dispo (Safari) */
+      if (halfW <= 0) {
+        var gap  = parseFloat(getComputedStyle(strip).gap) || 10;
+        var card = strip.querySelector('.cat-card');
+        if (card) {
+          halfW = originals.length * (card.offsetWidth + gap);
+        }
+      }
+      return halfW;
+    }
+
+    /* ── 4. Boucle RAF ── */
+    function step(ts) {
+      if (!paused) {
+        if (lastTime !== null) {
+          var delta = ts - lastTime;
+          /* Sécurité : si delta > 200ms (tab caché, etc.) on ignore le saut */
+          if (delta < 200) {
+            currentX -= (PX_PER_SEC * delta) / 1000;
+            /* Recalcule halfW si pas encore stable (Safari lazy layout) */
+            var hw = halfW > 0 ? halfW : measureHalf();
+            if (hw > 0 && currentX <= -hw) {
+              currentX += hw;   /* saut invisible — les clones prennent la relève */
+            }
+            strip.style.transform = 'translateX(' + currentX + 'px)';
+          }
+        }
+        lastTime = ts;
+      } else {
+        lastTime = null;    /* évite le saut brutal au retour de pause */
+      }
+      rafId = requestAnimationFrame(step);
+    }
+
+    /* ── 5. Swipe touch : drag libre puis reprise ── */
+    var touchStartX    = 0;
+    var touchStartTX   = 0;   /* translateX au début du touch */
+    var isDragging     = false;
+
+    outer.addEventListener('touchstart', function(e) {
+      isDragging   = true;
+      touchStartX  = e.touches[0].clientX;
+      touchStartTX = currentX;
+      paused       = true;
+      clearTimeout(resumeTimer);
+      /* Coupe la transition CSS pendant le drag */
+      strip.style.transition = 'none';
+    }, { passive: true });
+
+    outer.addEventListener('touchmove', function(e) {
+      if (!isDragging) return;
+      var dx   = e.touches[0].clientX - touchStartX;
+      var newX = touchStartTX + dx;
+      /* Borne : pas de débordement hors boucle */
+      var hw = halfW > 0 ? halfW : measureHalf();
+      if (hw > 0) {
+        if (newX > 0)   newX = 0;
+        if (newX < -hw) newX = -hw + 1;
+      }
+      currentX = newX;
+      strip.style.transform = 'translateX(' + currentX + 'px)';
+    }, { passive: true });
+
+    outer.addEventListener('touchend', function() {
+      isDragging = false;
+      clearTimeout(resumeTimer);
+      resumeTimer = setTimeout(function() {
+        paused = false;
+      }, 1500);
+    }, { passive: true });
+
+    /* ── 6. Pause hover (desktop) ── */
+    outer.addEventListener('mouseenter', function() { paused = true; });
+    outer.addEventListener('mouseleave', function() { paused = false; });
+
+    /* ── 7. Pause quand l'onglet est caché (économie batterie) ── */
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) {
+        paused = true;
+      } else {
+        setTimeout(function() { paused = false; }, 300);
+      }
+    });
+
+    /* ── 8. Recalcul au resize ── */
+    var resizeTimer;
+    window.addEventListener('resize', function() {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function() {
+        var hw = measureHalf();
+        /* Si on a dépassé la nouvelle moitié, recentre */
+        if (hw > 0 && currentX <= -hw) {
+          currentX = currentX % (-hw) || 0;
+          strip.style.transform = 'translateX(' + currentX + 'px)';
+        }
+      }, 150);
+    });
+
+    /* ── 9. Démarrage : attend images + délai Safari layout ── */
+    function startAfterImages() {
+      var imgs  = strip.querySelectorAll('img');
+      var total = imgs.length;
+      if (total === 0) {
+        setTimeout(function() {
+          measureHalf();
+          rafId = requestAnimationFrame(step);
+        }, 100);
+        return;
+      }
+      var loaded = 0;
+      function onLoad() {
+        loaded++;
+        if (loaded >= total) {
+          setTimeout(function() {
+            measureHalf();
+            rafId = requestAnimationFrame(step);
+          }, 120); /* Safari a besoin d'un tick supplémentaire après onload */
+        }
+      }
+      imgs.forEach(function(img) {
+        if (img.complete) { onLoad(); }
+        else {
+          img.addEventListener('load',  onLoad);
+          img.addEventListener('error', onLoad);
+        }
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', startAfterImages);
+    } else {
+      startAfterImages();
+    }
+  }
+
+  /* Lance après le chargement complet pour que offsetWidth soit fiable */
+  if (document.readyState === 'complete') {
+    init();
+  } else {
+    window.addEventListener('load', init);
+  }
+})();
+</script>
 </section>
 
 <!-- FEATURED PRODUCTS -->
@@ -488,13 +677,24 @@ function openSizeModal(productId, productName, sizesStr, btn) {
     _modalSelectedSize = null;
     document.getElementById('modalProductName').textContent = productName;
 
-    const available = sizesStr ? sizesStr.split(',').map(s => s.trim()).filter(Boolean) : ALL_SIZES;
+    let available = ALL_SIZES;
+    if (sizesStr) {
+        try {
+            const parsed = JSON.parse(sizesStr);
+            if (Array.isArray(parsed) && parsed.length) {
+                available = parsed.map(s => String(s).trim().replace(/^["']+|["']+$/g, ''));
+            }
+        } catch(e) {
+            available = sizesStr.replace(/[\[\]]/g, '').split(',').map(s => s.trim().replace(/^["']+|["']+$/g, '')).filter(Boolean);
+        }
+    }
     const container = document.getElementById('modalSizes');
     container.innerHTML = '';
 
     available.forEach(size => {
+        const cleanSize = String(size).trim().replace(/^["']+|["']+$/g, '');
         const btn = document.createElement('button');
-        btn.textContent = size;
+        btn.textContent = cleanSize;
         btn.style.cssText = 'padding:10px 20px; border:2px solid #e0d8ce; background:#fff; font-family:Syne,sans-serif; font-size:1rem; font-weight:700; cursor:pointer; transition:all 0.2s; letter-spacing:0.05em;';
         btn.onclick = () => {
             container.querySelectorAll('button').forEach(b => {
@@ -505,7 +705,7 @@ function openSizeModal(productId, productName, sizesStr, btn) {
             btn.style.background = 'var(--dark)';
             btn.style.borderColor = 'var(--dark)';
             btn.style.color = 'var(--gold)';
-            _modalSelectedSize = size;
+            _modalSelectedSize = cleanSize;
         };
         container.appendChild(btn);
     });
@@ -541,7 +741,7 @@ function confirmAddToCart() {
         ? '&color=' + encodeURIComponent(_modalSelectedColor.name) + '&color_hex=' + encodeURIComponent(_modalSelectedColor.hex)
         : '';
 
-    fetch('cart-action.php', {
+    fetch('<?= SITE_URL ?>/cart-action.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: 'action=add&product_id=' + _modalProductId + '&quantity=1&size=' + encodeURIComponent(_modalSelectedSize) + colorParam

@@ -155,4 +155,52 @@ if ($catSlug) {
     </div>
 </section>
 
+<script>
+(function() {
+  if (window.innerWidth > 768) return;
+  var inner = document.querySelector('.filters-inner');
+  if (!inner) return;
+
+  var PX_PER_SEC = 40;
+  var currentX = 0;
+  var maxX = 0;
+  var paused = false;
+  var lastTime = null;
+  var rafId = null;
+  var resumeTimer = null;
+
+  function measure() {
+    maxX = inner.scrollWidth - inner.offsetWidth;
+  }
+
+  function step(ts) {
+    if (!lastTime) lastTime = ts;
+    var dt = ts - lastTime;
+    lastTime = ts;
+
+    if (!paused && maxX > 0) {
+      currentX += PX_PER_SEC * dt / 1000;
+      if (currentX >= maxX) currentX = 0;
+      inner.scrollLeft = currentX;
+    }
+    rafId = requestAnimationFrame(step);
+  }
+
+  function pause() {
+    paused = true;
+    clearTimeout(resumeTimer);
+    resumeTimer = setTimeout(function() { paused = false; }, 2000);
+  }
+
+  window.addEventListener('resize', measure);
+  inner.addEventListener('touchstart', pause, { passive: true });
+  inner.addEventListener('touchmove', function() {
+    currentX = inner.scrollLeft;
+  }, { passive: true });
+
+  measure();
+  rafId = requestAnimationFrame(step);
+})();
+</script>
+
 <?php require_once 'includes/footer.php'; ?>

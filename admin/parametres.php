@@ -5,12 +5,26 @@ $msg = '';
 
 // Sauvegarder
 $allowedKeys = [
-    'stripe_publishable_key','stripe_secret_key','stripe_mode','stripe_currency','stripe_fcfa_to_eur',
     'site_name','site_phone','site_email','site_address',
     'wave_number','orange_money_number','bank_name','bank_iban','bank_owner',
+    'wave_api_key',
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Sauvegarder config email dans mail.php
+    if (!empty($_POST['mail_username'])) {
+        $mailUsername  = trim($_POST['mail_username']);
+        $mailPassword  = trim($_POST['mail_password']);
+        $mailFromName  = trim($_POST['mail_from_name']) ?: 'AfroStyle Atelier';
+        // Garder l'ancien mot de passe si le champ est vide
+        if (empty($mailPassword)) {
+            require_once __DIR__ . '/../config/mail.php';
+            $mailPassword = MAIL_PASSWORD;
+        }
+        $mailContent = "<?php\n// Configuration SMTP — mise à jour depuis l'admin\ndefine('MAIL_HOST',       'smtp.gmail.com');\ndefine('MAIL_PORT',       587);\ndefine('MAIL_USERNAME',   " . var_export($mailUsername, true) . ");\ndefine('MAIL_PASSWORD',   " . var_export($mailPassword, true) . ");\ndefine('MAIL_FROM_EMAIL', " . var_export($mailUsername, true) . ");\ndefine('MAIL_FROM_NAME',  " . var_export($mailFromName, true) . ");\ndefine('MAIL_ENCRYPTION', 'tls');\n";
+        file_put_contents(__DIR__ . '/../config/mail.php', $mailContent);
+    }
+
     foreach ($allowedKeys as $key) {
         if (isset($_POST[$key])) {
             $stmt = $db->prepare("UPDATE settings SET setting_value=? WHERE setting_key=?");
@@ -59,86 +73,6 @@ require_once 'includes/admin_header.php';
 
   <!-- COLONNE GAUCHE -->
   <div style="display:flex; flex-direction:column; gap:24px;">
-
-    <!-- STRIPE -->
-    <div class="admin-card">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid #f0ebe0;">
-        <div style="background:#635bff;color:#fff;padding:8px 14px;font-size:1.1rem;font-weight:700;letter-spacing:0.05em;">stripe</div>
-        <div>
-          <div style="font-size:1.1rem;font-weight:700;color:var(--dark);">Paiement par carte</div>
-          <div style="font-size:0.88rem;color:var(--muted);">Clés API Stripe</div>
-        </div>
-        <div style="margin-left:auto;">
-          <span id="stripe-mode-badge" style="padding:4px 14px;font-size:0.82rem;font-weight:700;border-radius:20px;
-            <?= sv($settings,'stripe_mode')==='live' ? 'background:rgba(56,161,105,0.1);color:#276749;' : 'background:rgba(255,152,0,0.1);color:#c05621;' ?>">
-            <?= sv($settings,'stripe_mode') === 'live' ? '🟢 LIVE' : '🟡 TEST' ?>
-          </span>
-        </div>
-      </div>
-
-      <div class="admin-form">
-        <div style="margin-bottom:18px;">
-          <label>Mode</label>
-          <select name="stripe_mode" onchange="updateModeBadge(this.value)" style="width:100%;padding:12px 14px;border:1.5px solid #e0d8ce;font-family:inherit;font-size:1rem;background:#fff;outline:none;">
-            <option value="test" <?= sv($settings,'stripe_mode')==='test'?'selected':'' ?>>🟡 Test — pour les essais</option>
-            <option value="live" <?= sv($settings,'stripe_mode')==='live'?'selected':'' ?>>🟢 Live — paiements réels</option>
-          </select>
-        </div>
-        <div style="margin-bottom:18px;">
-          <label>Publishable Key</label>
-          <input type="text" name="stripe_publishable_key" value="<?= sv($settings,'stripe_publishable_key') ?>" placeholder="pk_test_...">
-        </div>
-        <div style="margin-bottom:18px;">
-          <label>Secret Key</label>
-          <div style="position:relative;">
-            <input type="password" name="stripe_secret_key" id="stripe_sk" value="<?= sv($settings,'stripe_secret_key') ?>" placeholder="sk_test_...">
-            <button type="button" onclick="toggleSecret()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);font-size:0.9rem;">
-              👁
-            </button>
-          </div>
-          <small style="color:var(--muted);font-size:0.85rem;">Ne partagez jamais cette clé — elle donne accès à votre compte Stripe.</small>
-        </div>
-        <div style="margin-bottom:0;">
-          <label>Devise</label>
-          <select name="stripe_currency" style="width:100%;padding:12px 14px;border:1.5px solid #e0d8ce;font-family:inherit;font-size:1rem;background:#fff;outline:none;">
-            <option value="eur" <?= sv($settings,'stripe_currency')==='eur'?'selected':'' ?>>EUR — Euro (€)</option>
-            <option value="usd" <?= sv($settings,'stripe_currency')==='usd'?'selected':'' ?>>USD — Dollar ($)</option>
-            <option value="xof" <?= sv($settings,'stripe_currency')==='xof'?'selected':'' ?>>XOF — Franc CFA</option>
-          </select>
-        </div>
-
-        <!-- CONVERSION -->
-        <div style="background:#fffbf0;border:1px solid rgba(200,146,26,0.2);padding:18px;margin-top:4px;">
-          <div style="font-size:0.85rem;font-weight:700;color:var(--gold);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:14px;">
-            💱 Conversion FCFA → EUR
-          </div>
-          <div class="admin-form">
-            <div style="margin-bottom:14px;">
-              <label>Taux FCFA → EUR</label>
-              <input type="number" name="stripe_fcfa_to_eur"
-                     value="<?= sv($settings,'stripe_fcfa_to_eur') ?>"
-                     step="0.00001" min="0" placeholder="0.00152"
-                     oninput="updateConversionPreview()">
-              <small style="color:var(--muted);font-size:0.85rem;">
-                Taux actuel BCF : 1 EUR = 655.957 FCFA → taux = 0.00152
-              </small>
-            </div>
-            <!-- Simulateur -->
-            <div style="background:#fff;border:1px solid #e0d8ce;padding:14px 16px;">
-              <div style="font-size:0.82rem;color:var(--muted);margin-bottom:10px;font-weight:600;">Simulateur de conversion</div>
-              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                <input type="number" id="sim_fcfa" value="190000" oninput="updateConversionPreview()"
-                  style="width:130px;padding:8px 12px;border:1px solid #e0d8ce;font-size:1rem;font-family:inherit;">
-                <span style="color:var(--muted);">FCFA =</span>
-                <strong id="sim_eur" style="font-size:1.2rem;color:#635bff;">288.80 €</strong>
-                <span style="color:var(--muted);font-size:0.85rem;">(Stripe reçoit ce montant)</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
 
     <!-- PAIEMENTS MOBILES -->
     <div class="admin-card">
@@ -199,6 +133,94 @@ require_once 'includes/admin_header.php';
       </div>
     </div>
 
+    <!-- EMAIL SMTP -->
+    <div class="admin-card">
+      <div style="font-size:1.1rem;font-weight:700;color:var(--dark);margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid #f0ebe0;">
+        ✉️ Configuration Email (Gmail SMTP)
+      </div>
+      <?php
+        $mailFile = __DIR__ . '/../config/mail.php';
+        $mailCfg  = [];
+        if (file_exists($mailFile)) {
+            $lines = file($mailFile);
+            foreach ($lines as $line) {
+                if (preg_match("/define\('(MAIL_\w+)',\s*'([^']*)'\)/", $line, $m)) {
+                    $mailCfg[$m[1]] = $m[2];
+                }
+            }
+        }
+      ?>
+      <div class="admin-form">
+        <div style="margin-bottom:16px;">
+          <label>Adresse Gmail expéditeur</label>
+          <input type="email" name="mail_username"
+                 value="<?= htmlspecialchars($mailCfg['MAIL_USERNAME'] ?? '') ?>"
+                 placeholder="votre@gmail.com">
+          <small style="color:var(--muted);font-size:0.85rem;">Doit être un compte Gmail avec accès SMTP activé.</small>
+        </div>
+        <div style="margin-bottom:16px;">
+          <label>Mot de passe d'application Google</label>
+          <div style="position:relative;">
+            <input type="password" name="mail_password" id="mail_pass"
+                   placeholder="Laisser vide pour ne pas changer"
+                   autocomplete="new-password">
+            <button type="button" onclick="document.getElementById('mail_pass').type = document.getElementById('mail_pass').type==='password'?'text':'password'"
+                    style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);">👁</button>
+          </div>
+          <small style="color:var(--muted);font-size:0.85rem;">
+            Générer sur <strong>myaccount.google.com</strong> → Sécurité → Mots de passe des applications.
+          </small>
+        </div>
+        <div style="margin-bottom:0;">
+          <label>Nom expéditeur</label>
+          <input type="text" name="mail_from_name"
+                 value="<?= htmlspecialchars($mailCfg['MAIL_FROM_NAME'] ?? 'AfroStyle Atelier') ?>"
+                 placeholder="AfroStyle Atelier">
+        </div>
+        <div style="margin-top:16px;background:#fffbf0;border:1px solid rgba(200,146,26,0.2);padding:14px 16px;font-size:0.88rem;color:#7a6248;">
+          📧 Expéditeur actuel : <strong><?= htmlspecialchars($mailCfg['MAIL_FROM_EMAIL'] ?? 'non configuré') ?></strong>
+        </div>
+        <div style="margin-top:16px;background:#e8f9f0;border:1px solid rgba(0,180,100,0.2);padding:14px 16px;font-size:0.88rem;color:#276749;">
+          🔗 URL Webhook Wave à configurer sur wave.com/business :<br>
+          <strong style="word-break:break-all;"><?= SITE_URL ?>/wave-webhook.php</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- WAVE BUSINESS API -->
+    <div class="admin-card">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid #f0ebe0;">
+        <div style="background:#00b464;color:#fff;padding:8px 14px;font-size:1.1rem;font-weight:700;border-radius:4px;">Wave</div>
+        <div>
+          <div style="font-size:1.1rem;font-weight:700;color:var(--dark);">Wave Business API</div>
+          <div style="font-size:0.88rem;color:var(--muted);">Paiement automatique via Wave</div>
+        </div>
+        <div style="margin-left:auto;">
+          <?php $waveApiKey = $settings['wave_api_key']['setting_value'] ?? ''; ?>
+          <span style="padding:4px 14px;font-size:0.82rem;font-weight:700;border-radius:20px;
+            <?= $waveApiKey ? 'background:rgba(0,180,100,0.1);color:#276749;' : 'background:rgba(200,200,200,0.2);color:#999;' ?>">
+            <?= $waveApiKey ? '🟢 ACTIF' : '⚪ NON CONFIGURÉ' ?>
+          </span>
+        </div>
+      </div>
+      <div class="admin-form">
+        <div style="margin-bottom:16px;">
+          <label>Wave API Key</label>
+          <div style="position:relative;">
+            <input type="password" name="wave_api_key" id="wave_api_key"
+                   value="<?= htmlspecialchars($waveApiKey) ?>"
+                   placeholder="wave_sn_prod_xxxxxxxxxxxx">
+            <button type="button" onclick="document.getElementById('wave_api_key').type = document.getElementById('wave_api_key').type==='password'?'text':'password'"
+                    style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--muted);">👁</button>
+          </div>
+          <small style="color:var(--muted);font-size:0.85rem;">Disponible sur <strong>wave.com/business</strong> → API → Clés.</small>
+        </div>
+        <div style="background:#e8f9f0;border:1px solid rgba(0,180,100,0.2);padding:14px 16px;font-size:0.88rem;color:#276749;">
+          ℹ️ Une fois la clé ajoutée, les clients pourront payer directement par Wave ou carte bancaire sans intervention manuelle.
+        </div>
+      </div>
+    </div>
+
     <!-- PHOTO TOUT VOIR -->
     <div class="admin-card">
       <div style="font-size:1.1rem;font-weight:700;color:var(--dark);margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid #f0ebe0;">
@@ -231,19 +253,18 @@ require_once 'includes/admin_header.php';
       </div>
     </div>
 
-    <!-- AIDE STRIPE -->
-    <div style="background:#f0f0ff;border:1px solid rgba(99,91,255,0.2);padding:24px;">
-      <p style="margin:0 0 12px;font-size:0.9rem;font-weight:700;color:#635bff;letter-spacing:0.05em;text-transform:uppercase;">Comment trouver vos clés Stripe ?</p>
+    <!-- AIDE WAVE -->
+    <div style="background:#e8f9f0;border:1px solid rgba(0,180,100,0.2);padding:24px;">
+      <p style="margin:0 0 12px;font-size:0.9rem;font-weight:700;color:#00b464;letter-spacing:0.05em;text-transform:uppercase;">Comment obtenir une clé Wave Business ?</p>
       <ol style="margin:0;padding-left:20px;font-size:0.95rem;color:#444;line-height:2;">
-        <li>Connectez-vous sur <strong>dashboard.stripe.com</strong></li>
-        <li>Allez dans <strong>Développeurs → Clés API</strong></li>
-        <li>Copiez la <strong>Publishable key</strong> (pk_test_...)</li>
-        <li>Cliquez sur <strong>"Afficher"</strong> pour la Secret key</li>
-        <li>Collez les deux clés ci-contre</li>
+        <li>Créez un compte sur <strong>wave.com/fr/business</strong></li>
+        <li>Vérifiez votre identité (pièce d'identité + NINEA)</li>
+        <li>Allez dans <strong>Paramètres → API</strong></li>
+        <li>Copiez votre <strong>clé API</strong> et collez-la ci-dessus</li>
       </ol>
-      <div style="margin-top:16px;padding:12px;background:#fff;border:1px solid rgba(99,91,255,0.15);">
-        <p style="margin:0;font-size:0.88rem;color:#635bff;">
-          🟡 <strong>Mode Test</strong> — utilisez la carte <code>4242 4242 4242 4242</code> (exp: 12/26, CVV: 123) pour tester sans frais réels.
+      <div style="margin-top:16px;padding:12px;background:#fff;border:1px solid rgba(0,180,100,0.15);">
+        <p style="margin:0;font-size:0.88rem;color:#00b464;">
+          ✅ Une fois la clé ajoutée, les clients paieront automatiquement via Wave sans intervention manuelle.
         </p>
       </div>
     </div>
@@ -262,30 +283,7 @@ require_once 'includes/admin_header.php';
 </div>
 
 <script>
-function toggleSecret() {
-    const input = document.getElementById('stripe_sk');
-    input.type = input.type === 'password' ? 'text' : 'password';
-}
-function updateConversionPreview() {
-    const rate  = parseFloat(document.querySelector('input[name=stripe_fcfa_to_eur]').value) || 0.00152;
-    const fcfa  = parseFloat(document.getElementById('sim_fcfa').value) || 0;
-    const eur   = (fcfa * rate).toFixed(2);
-    document.getElementById('sim_eur').textContent = parseFloat(eur).toLocaleString('fr-FR', {minimumFractionDigits:2}) + ' €';
-}
-// Init simulateur
-document.addEventListener('DOMContentLoaded', updateConversionPreview);
-function updateModeBadge(val) {
-    const badge = document.getElementById('stripe-mode-badge');
-    if (val === 'live') {
-        badge.textContent = '🟢 LIVE';
-        badge.style.background = 'rgba(56,161,105,0.1)';
-        badge.style.color = '#276749';
-    } else {
-        badge.textContent = '🟡 TEST';
-        badge.style.background = 'rgba(255,152,0,0.1)';
-        badge.style.color = '#c05621';
-    }
-}
+// Pas de JS Stripe nécessaire
 </script>
 
 <?php require_once 'includes/admin_footer.php'; ?>

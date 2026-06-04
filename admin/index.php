@@ -1,9 +1,6 @@
 <?php
 require_once 'includes/auth.php';
 
-// Redirect /admin/ to /admin/index.php
-if (!file_exists('index.php')) { header('Location: index.php'); exit; }
-
 $adminTitle = 'Tableau de bord';
 $db = getDB();
 $stats = [
@@ -35,7 +32,7 @@ require_once 'includes/admin_header.php';
     <div class="stat-card" style="border-color:#1A7A4A;">
         <div class="stat-icon">💰</div>
         <div class="stat-value" style="font-size:1.3rem;"><?= number_format($stats['revenue'], 0, ',', ' ') ?></div>
-        <div class="stat-label">CA total (FCFA)</div>
+        <div class="stat-label">CA total (€)</div>
     </div>
     <div class="stat-card" style="border-color:#1565C0;">
         <div class="stat-icon">👥</div>
@@ -57,7 +54,7 @@ require_once 'includes/admin_header.php';
                 <tr>
                     <td><strong><?= htmlspecialchars($ord['order_number']) ?></strong></td>
                     <td><?= htmlspecialchars($ord['first_name'] . ' ' . $ord['last_name']) ?></td>
-                    <td><?= number_format($ord['total_amount'], 0, ',', ' ') ?> FCFA</td>
+                    <td><?= number_format($ord['total_amount'], 0, ',', ' ') ?> €</td>
                     <td><span class="status-badge status-<?= $ord['status'] ?>"><?= $statusLabels[$ord['status']] ?? $ord['status'] ?></span></td>
                     <td style="color:var(--muted); font-size:0.78rem;"><?= date('d/m/Y', strtotime($ord['created_at'])) ?></td>
                     <td><a href="commande-detail.php?id=<?= $ord['id'] ?>" class="btn-admin btn-gold btn-sm">Voir</a></td>

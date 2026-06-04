@@ -59,11 +59,24 @@ body {
   font-size: 1.17rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  padding: 8px 24px;
-  display: flex;
-  justify-content: center;
-  gap: 32px;
-  flex-wrap: wrap;
+  padding: 8px 0;
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+}
+.topbar-track {
+  display: inline-flex;
+  gap: 0;
+  animation: topbar-scroll 60s linear infinite;
+}
+.topbar-track span {
+  padding: 0 40px;
+  border-right: 1px solid rgba(200,146,26,0.25);
+}
+.topbar-track span:last-child { border-right: none; }
+@keyframes topbar-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
 
 /* NAVBAR */
@@ -1119,7 +1132,7 @@ body {
 /* ============ FEATURED STRIP ============ */
 .featured-strip {
   background: var(--dark);
-  padding: 80px 0 72px;
+  padding: 40px 0 36px;
   position: relative;
   overflow: hidden;
 }
@@ -1135,24 +1148,24 @@ body {
 .featured-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 80px;
+  gap: 48px;
   align-items: center;
 }
 .featured-text { color: var(--cream); }
 .featured-text .section-title { color: var(--cream); }
-.featured-list { margin-top: 40px; list-style: none; }
+.featured-list { margin-top: 20px; list-style: none; }
 .featured-list li {
-  padding: 16px 0;
+  padding: 10px 0;
   border-bottom: 1px solid rgba(200,146,26,0.12);
   display: flex;
   align-items: center;
   gap: 12px;
   color: rgba(253,246,236,0.8);
-  font-size: 1.17rem;
+  font-size: 1rem;
   letter-spacing: 0.02em;
 }
-.featured-list li::before { content: '✦'; color: var(--gold); font-size: 1.17rem; }
-.featured-cta { margin-top: 32px; }
+.featured-list li::before { content: '✦'; color: var(--gold); font-size: 0.9rem; }
+.featured-cta { margin-top: 20px; }
 
 /* ============ TESTIMONIAL ============ */
 .testimonial-section { background: var(--cream-2); padding: 72px 0; }
@@ -1458,8 +1471,20 @@ body {
   top: 72px;
   z-index: 100;
 }
-.filters-inner { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
-.filter-label { font-size: 1.17rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); }
+.filters-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.filter-label {
+  font-size: 1.17rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
 .filter-btn {
   padding: 7px 16px;
   background: none;
@@ -1472,8 +1497,30 @@ body {
   transition: var(--transition);
   color: var(--dark);
   text-decoration: none;
+  white-space: nowrap;
 }
 .filter-btn.active, .filter-btn:hover { background: var(--dark); color: var(--cream); border-color: var(--dark); }
+
+@media (max-width: 768px) {
+  .filters-bar { padding: 10px 0; top: 60px; }
+  .filters-inner {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 8px;
+    padding: 4px 16px;
+  }
+  .filters-inner::-webkit-scrollbar { display: none; }
+  .filter-label { display: none; }
+  .filter-btn {
+    font-size: 0.82rem;
+    padding: 6px 14px;
+    border-radius: 20px;
+    flex-shrink: 0;
+  }
+  .sort-select { display: none; }
+}
 .sort-select {
   margin-left: auto;
   padding: 7px 14px;
@@ -1787,7 +1834,7 @@ body {
   .hero-actions { gap: 10px; }
 
   /* Categories */
-  .cat-card { width: 120px; height: 140px; }
+  .cat-card { min-width: 36vw; width: 36vw; height: 54vw; }
 
   /* Products */
   .products-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
@@ -2254,19 +2301,19 @@ body {
    ============================================ */
 .mariage-section {
   background: var(--dark);
-  padding: 28px 0;
+  padding: 16px 0;
 }
 .mariage-header {
   text-align: center;
-  padding: 0 24px 20px;
+  padding: 0 24px 12px;
   max-width: 700px;
   margin: 0 auto;
 }
 .mariage-intro {
-  font-size: 1.25rem;
+  font-size: 1rem;
   color: rgba(253,246,236,0.65);
-  line-height: 1.8;
-  margin-top: 16px;
+  line-height: 1.6;
+  margin-top: 8px;
 }
 
 /* GRILLE OCCASIONS */
@@ -2280,7 +2327,7 @@ body {
 }
 .occasion-card {
   background: var(--dark);
-  padding: 16px 18px;
+  padding: 10px 14px;
   transition: background 0.3s;
 }
 .occasion-card:hover { background: rgba(200,146,26,0.06); }
@@ -2302,9 +2349,9 @@ body {
   margin-bottom: 6px;
 }
 .occasion-card p {
-  font-size: 1.25rem;
+  font-size: 0.88rem;
   color: rgba(253,246,236,0.55);
-  line-height: 1.7;
+  line-height: 1.5;
   margin-bottom: 0;
 }
 .occasion-tags {
@@ -2372,7 +2419,7 @@ body {
 /* CTA MARIAGE */
 .mariage-cta {
   border-top: 1px solid rgba(200,146,26,0.2);
-  padding-top: 28px;
+  padding-top: 14px;
 }
 .mariage-cta-inner {
   display: flex;
@@ -2389,7 +2436,7 @@ body {
   margin-bottom: 8px;
 }
 .mariage-cta-text p {
-  font-size: 1.25rem;
+  font-size: 0.9rem;
   color: rgba(253,246,236,0.55);
   max-width: 480px;
 }

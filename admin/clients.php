@@ -17,7 +17,7 @@ require_once 'includes/admin_header.php';
                 <td style="font-size:1.1rem;"><?= htmlspecialchars($c['phone']) ?></td>
                 <td style="font-size:1.1rem;"><?= htmlspecialchars($c['city']) ?></td>
                 <td><strong><?= $c['order_count'] ?></strong></td>
-                <td><?= number_format($c['total_spent'] ?? 0, 0, ',', ' ') ?> FCFA</td>
+                <td><?= number_format($c['total_spent'] ?? 0, 0, ',', ' ') ?> €</td>
                 <td style="font-size:1rem; color:var(--muted);"><?= date('d/m/Y', strtotime($c['created_at'])) ?></td>
             </tr>
             <?php endforeach; ?>

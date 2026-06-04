@@ -80,9 +80,9 @@ require_once 'includes/admin_header.php';
                             <?php endif; ?>
                         </td>
                         <td><strong><?= htmlspecialchars($item['size']) ?></strong></td>
-                        <td><?= number_format($item['unit_price'], 0, ',', ' ') ?> FCFA</td>
+                        <td><?= number_format($item['unit_price'], 0, ',', ' ') ?> €</td>
                         <td><?= $item['quantity'] ?></td>
-                        <td><strong><?= number_format($item['unit_price'] * $item['quantity'], 0, ',', ' ') ?> FCFA</strong></td>
+                        <td><strong><?= number_format($item['unit_price'] * $item['quantity'], 0, ',', ' ') ?> €</strong></td>
                     </tr>
                     <?php if($item['is_custom_measure'] && $item['tour_poitrine']): ?>
                     <tr style="background:#FDFAF6;">
@@ -114,8 +114,8 @@ require_once 'includes/admin_header.php';
                 </tbody>
             </table>
             <div style="display:flex; justify-content:flex-end; padding:16px; gap:40px; font-size:1.1rem;">
-                <div>Livraison: <strong><?= number_format($order['delivery_fee'], 0, ',', ' ') ?> FCFA</strong></div>
-                <div style="font-size:1rem;">Total: <strong style="font-size:1.1rem;"><?= number_format($order['total_amount'], 0, ',', ' ') ?> FCFA</strong></div>
+                <div>Livraison: <strong><?= number_format($order['delivery_fee'], 0, ',', ' ') ?> €</strong></div>
+                <div style="font-size:1rem;">Total: <strong style="font-size:1.1rem;"><?= number_format($order['total_amount'], 0, ',', ' ') ?> €</strong></div>
             </div>
         </div>
 

@@ -16,75 +16,109 @@ if ($orderNumber) {
     $order = $stmt->fetch();
 }
 
-// Charger le taux de conversion
-$settings = $db->query("SELECT setting_key, setting_value FROM settings WHERE setting_group='stripe'")->fetchAll(PDO::FETCH_KEY_PAIR);
-$rate     = (float)($settings['stripe_fcfa_to_eur'] ?? 0.00152);
-$stripeOk = !empty($settings['stripe_secret_key']);
+// Charger les settings
+$allSettings = $db->query("SELECT setting_key, setting_value FROM settings")->fetchAll(PDO::FETCH_KEY_PAIR);
+$rate        = (float)($allSettings['stripe_fcfa_to_eur'] ?? 0.00152);
+$stripeOk    = !empty($allSettings['stripe_secret_key']);
+$waveNumber  = $allSettings['wave_number'] ?? '';
+$omNumber    = $allSettings['orange_money_number'] ?? '';
+$waveApiKey  = $allSettings['wave_api_key'] ?? '';
 $isPaiementCarte = $order && $order['payment_method'] === 'carte';
+$isPaiementWave  = $order && $order['payment_method'] === 'wave';
+$isPaiementOM    = $order && $order['payment_method'] === 'orange_money';
 $isPaid          = $order && $order['payment_status'] === 'paid';
 ?>
 
 <div class="container" style="padding: 60px 40px;">
     <div class="confirmation-box">
 
-        <?php if ($paymentStatus === 'success' && $isPaid): ?>
+        <?php if ($isPaid): ?>
+        <!-- PAIEMENT CONFIRMÉ -->
         <div class="confirmation-icon">✅</div>
         <div class="confirmation-number">Commande <?= htmlspecialchars($orderNumber) ?></div>
-        <h1 class="confirmation-title">Paiement reçu !</h1>
+        <h1 class="confirmation-title">Paiement confirmé !</h1>
         <p style="color:var(--text-muted); font-size:1rem; line-height:1.8; margin:16px 0 28px;">
-            Votre paiement par carte a été <strong style="color:#38a169;">confirmé par Stripe</strong>.<br>
+            Merci <strong><?= htmlspecialchars($order['first_name'] ?? '') ?></strong> ! Votre paiement a été reçu.<br>
             Nos artisans vont commencer la confection de votre commande.
         </p>
 
-        <?php elseif ($paymentStatus === 'cancelled'): ?>
-        <div class="confirmation-icon">⚠️</div>
-        <div class="confirmation-number">Commande <?= htmlspecialchars($orderNumber) ?></div>
-        <h1 class="confirmation-title">Paiement annulé</h1>
-        <p style="color:var(--text-muted); font-size:1rem; line-height:1.8; margin:16px 0 28px;">
-            Votre paiement par carte a été annulé. Votre commande est toujours enregistrée.<br>
-            Vous pouvez réessayer ou choisir un autre mode de paiement.
+        <?php elseif ($order && !$isPaid): ?>
+        <!-- PAGE DE PAIEMENT -->
+        <div class="confirmation-icon">🛍️</div>
+        <div class="confirmation-number">Commande #<?= htmlspecialchars($orderNumber) ?></div>
+        <h1 class="confirmation-title">Effectuez votre paiement</h1>
+        <p style="color:var(--text-muted); font-size:1rem; margin:8px 0 28px;">
+            Montant total : <strong style="font-size:1.4rem;color:var(--dark);"><?= number_format($order['total_amount'], 2, ',', ' ') ?> €</strong>
         </p>
-        <?php if ($order): ?>
-        <button onclick="payWithStripe()" class="btn btn-primary" style="margin-bottom:16px;">
-            💳 Réessayer le paiement par carte
-        </button>
+
+        <!-- SÉLECTION MÉTHODE DE PAIEMENT -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:28px;">
+
+            <?php if($isPaiementWave || $order['payment_method'] === 'wave'): ?>
+            <!-- WAVE -->
+            <div style="border:2px solid #00b464;padding:20px;text-align:center;border-radius:8px;background:#f0fff8;">
+                <div style="font-size:2rem;margin-bottom:8px;">📱</div>
+                <div style="font-weight:700;color:#00b464;font-size:1rem;margin-bottom:4px;">Wave</div>
+                <?php if($waveApiKey): ?>
+                <button onclick="payWithWave()" id="wave-btn" style="background:#00b464;color:#fff;border:none;padding:10px 20px;font-size:0.9rem;font-weight:700;cursor:pointer;border-radius:4px;width:100%;margin-top:8px;">
+                    Payer avec Wave
+                </button>
+                <?php else: ?>
+                <div style="font-size:0.85rem;color:#555;margin-top:8px;">Envoyez <strong><?= number_format($order['total_amount'],2,',','') ?> €</strong> au :</div>
+                <div style="font-size:1.2rem;font-weight:700;color:#00b464;margin:6px 0;"><?= htmlspecialchars($waveNumber) ?></div>
+                <div style="font-size:0.78rem;color:#888;">Réf: #<?= htmlspecialchars($orderNumber) ?></div>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+
+            <?php if($order['payment_method'] === 'orange_money'): ?>
+            <!-- ORANGE MONEY -->
+            <div style="border:2px solid #ff8c00;padding:20px;text-align:center;border-radius:8px;background:#fff9f0;">
+                <div style="font-size:2rem;margin-bottom:8px;">📱</div>
+                <div style="font-weight:700;color:#ff8c00;font-size:1rem;margin-bottom:4px;">Orange Money</div>
+                <div style="font-size:0.85rem;color:#555;margin-top:8px;">Envoyez <strong><?= number_format($order['total_amount'],2,',','') ?> €</strong> au :</div>
+                <div style="font-size:1.2rem;font-weight:700;color:#ff8c00;margin:6px 0;"><?= htmlspecialchars($omNumber) ?></div>
+                <div style="font-size:0.78rem;color:#888;">Réf: #<?= htmlspecialchars($orderNumber) ?></div>
+            </div>
+            <?php endif; ?>
+
+            <?php if($order['payment_method'] === 'virement'): ?>
+            <!-- VIREMENT -->
+            <div style="border:2px solid #4a5568;padding:20px;text-align:center;border-radius:8px;background:#f8f9fa;">
+                <div style="font-size:2rem;margin-bottom:8px;">🏦</div>
+                <div style="font-weight:700;color:#4a5568;font-size:1rem;margin-bottom:8px;">Virement bancaire</div>
+                <div style="text-align:left;font-size:0.85rem;color:#555;">
+                    <div><strong>Banque :</strong> <?= htmlspecialchars($allSettings['bank_name'] ?? '') ?></div>
+                    <div><strong>Titulaire :</strong> <?= htmlspecialchars($allSettings['bank_owner'] ?? '') ?></div>
+                    <div><strong>IBAN :</strong> <?= htmlspecialchars($allSettings['bank_iban'] ?? '') ?></div>
+                    <div><strong>Référence :</strong> #<?= htmlspecialchars($orderNumber) ?></div>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <?php if($order['payment_method'] === 'cash'): ?>
+            <!-- ESPÈCES -->
+            <div style="border:2px solid #38a169;padding:20px;text-align:center;border-radius:8px;background:#f0fff4;">
+                <div style="font-size:2rem;margin-bottom:8px;">💵</div>
+                <div style="font-weight:700;color:#38a169;font-size:1rem;margin-bottom:8px;">Espèces à la livraison</div>
+                <div style="font-size:0.85rem;color:#555;">Vous payez <strong><?= number_format($order['total_amount'],2,',','') ?> €</strong> en espèces à la réception de votre commande.</div>
+            </div>
+            <?php endif; ?>
+
+        </div>
+
+        <?php if(in_array($order['payment_method'], ['wave','orange_money'])): ?>
+        <div style="background:#fffbf0;border:1px solid rgba(200,146,26,0.2);padding:14px;font-size:0.85rem;color:#7a6248;border-radius:4px;margin-bottom:20px;">
+            📸 Après avoir effectué le paiement, envoyez la <strong>capture d'écran</strong> par WhatsApp au <strong><?= htmlspecialchars($waveNumber) ?></strong>
+        </div>
         <?php endif; ?>
 
         <?php else: ?>
         <div class="confirmation-icon">🎉</div>
-        <div class="confirmation-number">Commande <?= htmlspecialchars($orderNumber) ?></div>
-        <h1 class="confirmation-title">Merci pour votre commande !</h1>
-        <?php if($orderInfo || $order): ?>
-        <p style="color:var(--text-muted); font-size:1rem; line-height:1.8; margin:16px 0 28px;">
-            Bonjour <strong><?= htmlspecialchars($order['first_name'] ?? $orderInfo['name'] ?? '') ?></strong>,
-            votre commande <strong>#<?= htmlspecialchars($orderNumber) ?></strong> d'un montant de
-            <strong><?= number_format($order['total_amount'] ?? $orderInfo['total'] ?? 0, 0, ',', ' ') ?> FCFA</strong>
-            a bien été reçue.
-        </p>
-        <?php endif; ?>
+        <h1 class="confirmation-title">Commande enregistrée</h1>
         <?php endif; ?>
 
-        <!-- PAIEMENT PAR CARTE — si non payé -->
-        <?php if ($order && $isPaiementCarte && !$isPaid && $paymentStatus !== 'cancelled'): ?>
-        <div style="background:#f0f0ff;border:1px solid rgba(99,91,255,0.2);padding:24px;margin-bottom:28px;text-align:center;">
-            <p style="margin:0 0 6px;font-size:0.85rem;font-weight:700;color:#635bff;letter-spacing:0.05em;text-transform:uppercase;">💳 Paiement par carte</p>
-            <p style="margin:0 0 16px;color:#444;font-size:0.95rem;line-height:1.6;">
-                Vous avez choisi de payer par carte bancaire.<br>
-                Montant : <strong><?= number_format($order['total_amount'], 0, ',', ' ') ?> FCFA</strong>
-                = <strong style="color:#635bff;"><?= number_format($order['total_amount'] * $rate, 2, ',', ' ') ?> €</strong>
-            </p>
-            <?php if ($stripeOk): ?>
-            <button onclick="payWithStripe()" id="stripe-btn" class="btn btn-primary" style="background:#635bff;border-color:#635bff;font-size:1rem;padding:14px 40px;">
-                💳 Payer maintenant par carte
-            </button>
-            <p style="margin:10px 0 0;font-size:0.82rem;color:#888;">Paiement sécurisé via Stripe — Visa, Mastercard</p>
-            <?php else: ?>
-            <div style="background:#fff8f0;border:1px solid #f6ad55;padding:12px 16px;color:#c05621;font-size:0.9rem;">
-                ⚠ Le paiement en ligne n'est pas encore configuré. Notre équipe vous contactera pour organiser le paiement.
-            </div>
-            <?php endif; ?>
-        </div>
-        <?php endif; ?>
+
 
         <!-- ÉTAPES -->
         <?php if ($paymentStatus !== 'cancelled'): ?>
@@ -115,16 +149,18 @@ $isPaid          = $order && $order['payment_status'] === 'paid';
     </div>
 </div>
 
-<?php if ($order && $isPaiementCarte && !$isPaid && $stripeOk): ?>
-<script>
-function payWithStripe() {
-    const btn = document.getElementById('stripe-btn');
-    if (btn) { btn.textContent = '⏳ Redirection...'; btn.disabled = true; }
 
-    fetch('<?= SITE_URL ?>/stripe-checkout.php', {
+<?php if ($order && $isPaiementWave && !$isPaid && $waveApiKey): ?>
+<script>
+function payWithWave() {
+    const btn = document.getElementById('wave-btn');
+    btn.textContent = '⏳ Redirection...';
+    btn.disabled = true;
+
+    fetch('<?= SITE_URL ?>/wave-checkout.php', {
         method: 'POST',
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        body: 'order_number=<?= urlencode($orderNumber) ?>&total_fcfa=<?= $order['total_amount'] ?>'
+        body: 'order_number=<?= urlencode($orderNumber) ?>'
     })
     .then(r => r.json())
     .then(data => {
@@ -132,7 +168,8 @@ function payWithStripe() {
             window.location.href = data.url;
         } else {
             alert('Erreur : ' + (data.error || 'Réessayez.'));
-            if (btn) { btn.textContent = '💳 Payer maintenant par carte'; btn.disabled = false; }
+            btn.textContent = '📱 Payer avec Wave';
+            btn.disabled = false;
         }
     });
 }

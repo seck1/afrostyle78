@@ -13,6 +13,9 @@ $categories = $db->query("SELECT * FROM categories ORDER BY name")->fetchAll();
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" type="image/png" sizes="32x32" href="<?= SITE_URL ?>/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="<?= SITE_URL ?>/favicon-192.png">
+    <link rel="apple-touch-icon" href="<?= SITE_URL ?>/apple-touch-icon.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= isset($pageTitle) ? htmlspecialchars($pageTitle) . ' — ' : '' ?>AfroStyle78 | Mode Africaine — Guyancourt (78)</title>
     <meta name="description" content="AFROSTYLE78 — Le chic & l'élégance du sur-mesure africain. Spécialiste Mariages & Cérémonies. Basé à Guyancourt (78), livraison France & international.">
@@ -33,9 +36,14 @@ $categories = $db->query("SELECT * FROM categories ORDER BY name")->fetchAll();
 
 <!-- TOP BAR -->
 <div class="topbar">
+  <div class="topbar-track">
     <span>✦ Spécialiste Mariages & Cérémonies</span>
     <span>Sur-mesure — Le chic & l'élégance africaine</span>
-    <span>Guyancourt (78) &nbsp;·&nbsp; +33 6 44 72 87 30 &nbsp;·&nbsp; Livraison France & International ✦</span>
+    <span>Guyancourt (78) &nbsp;·&nbsp; +33 6 44 72 87 30 &nbsp;·&nbsp; Livraison France & International</span>
+    <span>✦ Spécialiste Mariages & Cérémonies</span>
+    <span>Sur-mesure — Le chic & l'élégance africaine</span>
+    <span>Guyancourt (78) &nbsp;·&nbsp; +33 6 44 72 87 30 &nbsp;·&nbsp; Livraison France & International</span>
+  </div>
 </div>
 
 <!-- NAVBAR -->

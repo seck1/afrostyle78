@@ -42,11 +42,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
     $fn   = trim($_POST['first_name'] ?? '');
     $ln   = trim($_POST['last_name'] ?? '');
     $ph   = trim($_POST['phone'] ?? '');
-    $addr = trim($_POST['address'] ?? '');
-    $city = trim($_POST['city'] ?? '');
+    $addr    = trim($_POST['address'] ?? '');
+    $city    = trim($_POST['city'] ?? '');
+    $country = trim($_POST['country'] ?? 'Sénégal');
 
-    $stmt = $db->prepare("UPDATE customers SET first_name=?, last_name=?, phone=?, address=?, city=? WHERE id=?");
-    $stmt->execute([$fn, $ln, $ph, $addr, $city, $customerId]);
+    $stmt = $db->prepare("UPDATE customers SET first_name=?, last_name=?, phone=?, address=?, city=?, country=? WHERE id=?");
+    $stmt->execute([$fn, $ln, $ph, $addr, $city, $country, $customerId]);
     $_SESSION['customer_name'] = $fn;
     $profileMsg = 'success';
 
@@ -151,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
                                 <?php endif; ?>
                             </div>
                             <div class="order-total">
-                                <?= number_format($order['total_amount'], 0, ',', ' ') ?> FCFA
+                                <?= number_format($order['total_amount'], 0, ',', ' ') ?> €
                             </div>
                         </div>
                         <div class="order-card-footer">
@@ -199,6 +200,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
                     <div class="form-group">
                         <label>Ville</label>
                         <input type="text" name="city" value="<?= htmlspecialchars($customer['city'] ?? '') ?>" placeholder="Dakar">
+                    </div>
+                    <div class="form-group">
+                        <label>Pays</label>
+                        <select name="country" style="width:100%;padding:14px 16px;border:1.5px solid #e0d8ce;font-family:inherit;font-size:1rem;background:#fff;outline:none;border-radius:2px;">
+                            <?php
+                            $countries = [
+                                'SN'=>'🇸🇳 Sénégal','CI'=>'🇨🇮 Côte d\'Ivoire','ML'=>'🇲🇱 Mali',
+                                'GN'=>'🇬🇳 Guinée','MR'=>'🇲🇷 Mauritanie','GH'=>'🇬🇭 Ghana','CM'=>'🇨🇲 Cameroun',
+                                'FR'=>'🇫🇷 France','BE'=>'🇧🇪 Belgique','CH'=>'🇨🇭 Suisse',
+                                'DE'=>'🇩🇪 Allemagne','GB'=>'🇬🇧 Royaume-Uni','ES'=>'🇪🇸 Espagne','IT'=>'🇮🇹 Italie',
+                                'US'=>'🇺🇸 États-Unis','CA'=>'🇨🇦 Canada',
+                            ];
+                            $savedCountry = $customer['country'] ?? 'Sénégal';
+                            foreach ($countries as $code => $label):
+                                $selected = ($savedCountry === $code || $savedCountry === $label) ? 'selected' : '';
+                            ?>
+                            <option value="<?= $code ?>" <?= $selected ?>><?= $label ?></option>
+                            <?php endforeach; ?>
+                        </select>
                     </div>
                     <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
                 </form>

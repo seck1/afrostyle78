@@ -12,6 +12,13 @@ $errors = [];
 $subtotal = array_sum(array_map(fn($i) => $i['price'] * $i['quantity'], $cart));
 
 // Charger les zones de livraison actives
+$siteSettings  = $db->query("SELECT setting_key, setting_value FROM settings")->fetchAll(PDO::FETCH_KEY_PAIR);
+$waveNumber    = $siteSettings['wave_number'] ?? '+33 6 44 72 87 30';
+$omNumber      = $siteSettings['orange_money_number'] ?? '+33 6 44 72 87 30';
+$bankName      = $siteSettings['bank_name'] ?? '';
+$bankOwner     = $siteSettings['bank_owner'] ?? '';
+$bankIban      = $siteSettings['bank_iban'] ?? '';
+$waveApiKey    = $siteSettings['wave_api_key'] ?? '';
 $shippingZones = $db->query("SELECT * FROM shipping_zones WHERE active=1 ORDER BY sort_order, id")->fetchAll();
 $shippingById  = [];
 foreach ($shippingZones as $z) $shippingById[$z['id']] = $z;
@@ -34,9 +41,22 @@ function calcShipping(array $zone, int $qty): float {
 $delivery = $selectedZone ? calcShipping($selectedZone, $totalQty) : 0;
 
 // Pré-remplir avec les infos du client connecté
-$prefill = ['first_name'=>'','last_name'=>'','email'=>'','phone'=>'','address'=>'','city'=>'Dakar'];
+// Détection pays par IP
+function detectCountryByIp(): string {
+    $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '';
+    $ip = trim(explode(',', $ip)[0]);
+    if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+        $data = @file_get_contents("https://ipapi.co/{$ip}/country/");
+        if ($data && strlen($data) === 2) return strtoupper($data);
+    }
+    return 'SN';
+}
+$detectedCountry = $_POST['country_code'] ?? $_SESSION['detected_country'] ?? null;
+$_SESSION['detected_country'] = $detectedCountry;
+
+$prefill = ['first_name'=>'','last_name'=>'','email'=>'','phone'=>'','address'=>'','city'=>'Dakar','country'=>'SN'];
 if (!empty($_SESSION['customer_id'])) {
-    $stmt = $db->prepare("SELECT first_name, last_name, email, phone, address, city FROM customers WHERE id = ?");
+    $stmt = $db->prepare("SELECT first_name, last_name, email, phone, address, city, country FROM customers WHERE id = ?");
     $stmt->execute([$_SESSION['customer_id']]);
     $cust = $stmt->fetch();
     if ($cust) {
@@ -46,8 +66,13 @@ if (!empty($_SESSION['customer_id'])) {
         $prefill['phone']      = $cust['phone'] ?? '';
         $prefill['address']    = $cust['address'] ?? '';
         $prefill['city']       = $cust['city'] ?: 'Dakar';
+        $prefill['country']    = $cust['country'] ?? 'SN';
+        // Utiliser le pays du profil si pas encore détecté
+        if (!$detectedCountry) $detectedCountry = $prefill['country'];
     }
 }
+if (!$detectedCountry) $detectedCountry = detectCountryByIp();
+$_SESSION['detected_country'] = $detectedCountry;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $firstName = trim($_POST['first_name'] ?? '');
@@ -93,8 +118,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Create order
             $orderNumber = 'AFS-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
             $total = $subtotal + $delivery;
-            $stmtOrder = $db->prepare("INSERT INTO orders (order_number, customer_id, total_amount, delivery_method, delivery_address, delivery_city, delivery_fee, payment_method, notes) VALUES (?,?,?,?,?,?,?,?,?)");
-            $stmtOrder->execute([$orderNumber, $customerId, $total, $deliveryMethod, $address, $city, $delivery, $paymentMethod, $notes]);
+            // Commande créée en attente de paiement
+            $initPaymentStatus = ($paymentMethod === 'cash') ? 'unpaid' : 'unpaid';
+            $stmtOrder = $db->prepare("INSERT INTO orders (order_number, customer_id, total_amount, delivery_method, delivery_address, delivery_city, delivery_fee, payment_method, payment_status, notes, status) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
+            $stmtOrder->execute([$orderNumber, $customerId, $total, $deliveryMethod, $address, $city, $delivery, $paymentMethod, $initPaymentStatus, $notes, 'pending']);
             $orderId = $db->lastInsertId();
 
             // Insert order items
@@ -198,28 +225,28 @@ $total = $subtotal + $delivery;
                         <label>Votre pays *</label>
                         <select id="country_select" name="country_code" onchange="filterShippingZones(this.value)" style="width:100%;padding:14px 16px;border:1.5px solid #e0d8ce;font-family:inherit;font-size:1rem;background:#fff;outline:none;">
                             <optgroup label="🇸🇳 Sénégal">
-                                <option value="SN" <?= ($_POST['country_code']??'SN')==='SN'?'selected':'' ?>>🇸🇳 Sénégal</option>
+                                <option value="SN" <?= $detectedCountry==='SN'?'selected':'' ?>>🇸🇳 Sénégal</option>
                             </optgroup>
                             <optgroup label="🌍 Afrique">
-                                <option value="CI" <?= ($_POST['country_code']??'')==='CI'?'selected':'' ?>>🇨🇮 Côte d'Ivoire</option>
-                                <option value="ML" <?= ($_POST['country_code']??'')==='ML'?'selected':'' ?>>🇲🇱 Mali</option>
-                                <option value="GN" <?= ($_POST['country_code']??'')==='GN'?'selected':'' ?>>🇬🇳 Guinée</option>
-                                <option value="MR" <?= ($_POST['country_code']??'')==='MR'?'selected':'' ?>>🇲🇷 Mauritanie</option>
-                                <option value="GH" <?= ($_POST['country_code']??'')==='GH'?'selected':'' ?>>🇬🇭 Ghana</option>
-                                <option value="CM" <?= ($_POST['country_code']??'')==='CM'?'selected':'' ?>>🇨🇲 Cameroun</option>
+                                <option value="CI" <?= $detectedCountry==='CI'?'selected':'' ?>>🇨🇮 Côte d'Ivoire</option>
+                                <option value="ML" <?= $detectedCountry==='ML'?'selected':'' ?>>🇲🇱 Mali</option>
+                                <option value="GN" <?= $detectedCountry==='GN'?'selected':'' ?>>🇬🇳 Guinée</option>
+                                <option value="MR" <?= $detectedCountry==='MR'?'selected':'' ?>>🇲🇷 Mauritanie</option>
+                                <option value="GH" <?= $detectedCountry==='GH'?'selected':'' ?>>🇬🇭 Ghana</option>
+                                <option value="CM" <?= $detectedCountry==='CM'?'selected':'' ?>>🇨🇲 Cameroun</option>
                             </optgroup>
                             <optgroup label="🇪🇺 Europe">
-                                <option value="FR" <?= ($_POST['country_code']??'')==='FR'?'selected':'' ?>>🇫🇷 France</option>
-                                <option value="BE" <?= ($_POST['country_code']??'')==='BE'?'selected':'' ?>>🇧🇪 Belgique</option>
-                                <option value="CH" <?= ($_POST['country_code']??'')==='CH'?'selected':'' ?>>🇨🇭 Suisse</option>
-                                <option value="DE" <?= ($_POST['country_code']??'')==='DE'?'selected':'' ?>>🇩🇪 Allemagne</option>
-                                <option value="GB" <?= ($_POST['country_code']??'')==='GB'?'selected':'' ?>>🇬🇧 Royaume-Uni</option>
-                                <option value="ES" <?= ($_POST['country_code']??'')==='ES'?'selected':'' ?>>🇪🇸 Espagne</option>
-                                <option value="IT" <?= ($_POST['country_code']??'')==='IT'?'selected':'' ?>>🇮🇹 Italie</option>
+                                <option value="FR" <?= $detectedCountry==='FR'?'selected':'' ?>>🇫🇷 France</option>
+                                <option value="BE" <?= $detectedCountry==='BE'?'selected':'' ?>>🇧🇪 Belgique</option>
+                                <option value="CH" <?= $detectedCountry==='CH'?'selected':'' ?>>🇨🇭 Suisse</option>
+                                <option value="DE" <?= $detectedCountry==='DE'?'selected':'' ?>>🇩🇪 Allemagne</option>
+                                <option value="GB" <?= $detectedCountry==='GB'?'selected':'' ?>>🇬🇧 Royaume-Uni</option>
+                                <option value="ES" <?= $detectedCountry==='ES'?'selected':'' ?>>🇪🇸 Espagne</option>
+                                <option value="IT" <?= $detectedCountry==='IT'?'selected':'' ?>>🇮🇹 Italie</option>
                             </optgroup>
                             <optgroup label="🌎 Amérique">
-                                <option value="US" <?= ($_POST['country_code']??'')==='US'?'selected':'' ?>>🇺🇸 États-Unis</option>
-                                <option value="CA" <?= ($_POST['country_code']??'')==='CA'?'selected':'' ?>>🇨🇦 Canada</option>
+                                <option value="US" <?= $detectedCountry==='US'?'selected':'' ?>>🇺🇸 États-Unis</option>
+                                <option value="CA" <?= $detectedCountry==='CA'?'selected':'' ?>>🇨🇦 Canada</option>
                             </optgroup>
                         </select>
                     </div>
@@ -244,7 +271,7 @@ $total = $subtotal + $delivery;
                         <label for="zone_<?= $z['id'] ?>">
                             <strong><?= $typeIcon ?> <?= htmlspecialchars($z['method']) ?></strong>
                             <span>
-                                <?= $z['price'] > 0 ? number_format($z['price'],0,',',' ').' FCFA' : '<strong style="color:#38a169;">Gratuit</strong>' ?>
+                                <?= $z['price'] > 0 ? number_format($z['price'],0,',',' ').' €' : '<strong style="color:#38a169;">Gratuit</strong>' ?>
                                 <?php if($z['delay']): ?> — <?= htmlspecialchars($z['delay']) ?><?php endif; ?>
                                 <?php if($z['description']): ?><br><small style="color:var(--text-muted)"><?= htmlspecialchars($z['description']) ?></small><?php endif; ?>
                             </span>
@@ -282,32 +309,20 @@ $total = $subtotal + $delivery;
                 <!-- MODE DE PAIEMENT -->
                 <div class="form-section">
                     <div class="form-section-title">Mode de paiement</div>
+                    <p style="color:var(--text-muted);font-size:0.95rem;margin-bottom:16px;">Choisissez votre mode de paiement. Vous effectuerez le paiement à l'étape suivante.</p>
                     <div class="payment-options">
-
                         <div class="payment-option">
-                            <input type="radio" name="payment_method" id="pay_cash" value="cash" checked onchange="showPaymentInfo('cash')">
-                            <label for="pay_cash">
-                                <span class="pay-icon">💵</span>
-                                <span class="pay-details">
-                                    <strong>Paiement à la livraison</strong>
-                                    <small>Espèces à la réception de votre commande</small>
-                                </span>
-                            </label>
-                        </div>
-
-                        <div class="payment-option">
-                            <input type="radio" name="payment_method" id="pay_wave" value="wave" onchange="showPaymentInfo('wave')">
+                            <input type="radio" name="payment_method" id="pay_wave" value="wave" checked>
                             <label for="pay_wave">
                                 <span class="pay-icon">📱</span>
                                 <span class="pay-details">
                                     <strong>Wave</strong>
-                                    <small>Mobile Money — Paiement instantané</small>
+                                    <small>Mobile Money — Instantané</small>
                                 </span>
                             </label>
                         </div>
-
                         <div class="payment-option">
-                            <input type="radio" name="payment_method" id="pay_orange" value="orange_money" onchange="showPaymentInfo('orange_money')">
+                            <input type="radio" name="payment_method" id="pay_orange" value="orange_money">
                             <label for="pay_orange">
                                 <span class="pay-icon">📱</span>
                                 <span class="pay-details">
@@ -316,57 +331,26 @@ $total = $subtotal + $delivery;
                                 </span>
                             </label>
                         </div>
-
                         <div class="payment-option">
-                            <input type="radio" name="payment_method" id="pay_bank" value="virement" onchange="showPaymentInfo('virement')">
+                            <input type="radio" name="payment_method" id="pay_bank" value="virement">
                             <label for="pay_bank">
                                 <span class="pay-icon">🏦</span>
                                 <span class="pay-details">
                                     <strong>Virement bancaire</strong>
-                                    <small>Paiement par virement — sous 48h</small>
+                                    <small>Sous 48h</small>
                                 </span>
                             </label>
                         </div>
-
                         <div class="payment-option">
-                            <input type="radio" name="payment_method" id="pay_card" value="carte" onchange="showPaymentInfo('carte')">
-                            <label for="pay_card">
-                                <span class="pay-icon">💳</span>
+                            <input type="radio" name="payment_method" id="pay_cash" value="cash">
+                            <label for="pay_cash">
+                                <span class="pay-icon">💵</span>
                                 <span class="pay-details">
-                                    <strong>Carte bancaire</strong>
-                                    <small>Visa / Mastercard — Paiement sécurisé</small>
+                                    <strong>Espèces à la livraison</strong>
+                                    <small>Paiement à la réception</small>
                                 </span>
                             </label>
                         </div>
-
-                    </div>
-
-                    <!-- INSTRUCTIONS PAIEMENT -->
-                    <div id="pay-info-cash" class="pay-info" style="display:block;">
-                        <p>✅ Aucune action requise. Vous payez en espèces à la réception de votre commande. Notre livreur vous contactera avant la livraison.</p>
-                    </div>
-                    <div id="pay-info-wave" class="pay-info" style="display:none;">
-                        <p>📱 Envoyez le montant total via <strong>Wave</strong> au numéro :</p>
-                        <div class="pay-number">+33 6 44 72 87 30</div>
-                        <p>Indiquez votre <strong>nom + numéro de commande</strong> dans la note Wave. Envoyez-nous la capture d'écran par WhatsApp.</p>
-                    </div>
-                    <div id="pay-info-orange_money" class="pay-info" style="display:none;">
-                        <p>📱 Envoyez le montant total via <strong>Orange Money</strong> au numéro :</p>
-                        <div class="pay-number">+33 6 44 72 87 30</div>
-                        <p>Indiquez votre <strong>nom + numéro de commande</strong> dans la note. Envoyez-nous la capture d'écran par WhatsApp.</p>
-                    </div>
-                    <div id="pay-info-virement" class="pay-info" style="display:none;">
-                        <p>🏦 Effectuez un virement bancaire vers le compte :</p>
-                        <div class="pay-bank-details">
-                            <div><span>Banque</span><strong>CBAO Dakar</strong></div>
-                            <div><span>Titulaire</span><strong>AfroStyle Atelier</strong></div>
-                            <div><span>IBAN/RIB</span><strong>SN12 0000 0000 0000 0000 0000</strong></div>
-                            <div><span>Référence</span><strong>Votre nom + numéro de commande</strong></div>
-                        </div>
-                        <p style="margin-top:12px;">La commande sera validée à réception du virement (1–2 jours ouvrables).</p>
-                    </div>
-                    <div id="pay-info-carte" class="pay-info" style="display:none;">
-                        <p>💳 Après confirmation de votre commande, vous recevrez un <strong>lien de paiement sécurisé</strong> par email ou WhatsApp pour régler par carte Visa/Mastercard.</p>
                     </div>
                 </div>
 
@@ -399,10 +383,10 @@ $total = $subtotal + $delivery;
                         <span>Total</span><span id="summary-total"><?= number_format($total, 0, ',', ' ') ?> <?= CURRENCY ?></span>
                     </div>
                     <button type="submit" class="btn btn-primary btn-lg btn-full" style="margin-top:24px;">
-                        ✓ Confirmer la commande
+                        Continuer vers le paiement →
                     </button>
                     <div style="margin-top:12px; font-size:0.7rem; color:var(--text-muted); text-align:center;">
-                        Vous serez contacté par téléphone pour confirmer et organiser le paiement.
+                        🔒 Paiement sécurisé — Vous effectuerez le paiement à l'étape suivante.
                     </div>
                 </div>
             </div>
@@ -431,7 +415,7 @@ function updateDeliveryPrice(zoneId) {
     const total    = document.getElementById('summary-total');
 
     if (price > 0) {
-        let label = price.toLocaleString('fr-FR') + ' FCFA';
+        let label = price.toLocaleString('fr-FR') + ' €';
         if (TOTAL_QTY >= 6 && parseFloat(zone.price) > 0)
             label += ' <small style="color:var(--muted)">(+' + zone.surcharge_6_plus + '%, 6+ art.)</small>';
         else if (TOTAL_QTY >= 3 && parseFloat(zone.price) > 0)
@@ -440,7 +424,7 @@ function updateDeliveryPrice(zoneId) {
     } else {
         delivery.innerHTML = '<span style="color:#38a169;">Gratuit</span>';
     }
-    total.textContent = (SUBTOTAL + price).toLocaleString('fr-FR') + ' FCFA';
+    total.textContent = (SUBTOTAL + price).toLocaleString('fr-FR') + ' €';
 }
 
 function filterShippingZones(countryCode) {

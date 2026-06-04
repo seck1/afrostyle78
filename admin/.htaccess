@@ -1,4 +1,5 @@
 RewriteEngine On
+RewriteBase /admin/
 
 # Réécrire les URLs sans .php vers les fichiers .php (sans redirection 301)
 RewriteCond %{REQUEST_FILENAME} !-d

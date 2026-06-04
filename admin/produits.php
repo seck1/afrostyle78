@@ -141,8 +141,8 @@ require_once 'includes/admin_header.php';
         </div>
         <div class="form-row full"><div><label>Description</label><textarea name="description" rows="3"><?= htmlspecialchars($editProduct['description'] ?? '') ?></textarea></div></div>
         <div class="form-row">
-            <div><label>Prix (FCFA) *</label><input type="number" name="price" value="<?= $editProduct['price'] ?? '' ?>" step="500" required></div>
-            <div><label>Prix promo (FCFA)</label><input type="number" name="promo_price" value="<?= $editProduct['promo_price'] ?? '' ?>" step="500" placeholder="Vide si pas de promo"></div>
+            <div><label>Prix (€) *</label><input type="number" name="price" value="<?= $editProduct['price'] ?? '' ?>" step="0.01" min="0" required></div>
+            <div><label>Prix promo (€)</label><input type="number" name="promo_price" value="<?= $editProduct['promo_price'] ?? '' ?>" step="0.01" min="0" placeholder="Vide si pas de promo"></div>
         </div>
         <div class="form-row">
             <div><label>Stock</label><input type="number" name="stock" value="<?= $editProduct['stock'] ?? 0 ?>"></div>
@@ -294,7 +294,7 @@ require_once 'includes/admin_header.php';
                     <span style="color:var(--gold); font-weight:700;"><?= number_format($p['promo_price'],0,',',' ') ?></span>
                     <span style="text-decoration:line-through; color:var(--muted); font-size:0.95rem; margin-left:6px;"><?= number_format($p['price'],0,',',' ') ?></span>
                     <?php else: ?>
-                    <?= number_format($p['price'],0,',',' ') ?> FCFA
+                    <?= number_format($p['price'],0,',',' ') ?> €
                     <?php endif; ?>
                 </td>
                 <td style="font-size:1.15rem;"><?= $p['stock'] ?></td>

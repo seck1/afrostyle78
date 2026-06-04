@@ -74,7 +74,7 @@ try {
                 'unit_amount'  => $amountCents,
                 'product_data' => [
                     'name'        => 'Commande AfroStyle ' . $orderNumber,
-                    'description' => 'Total: ' . number_format($totalFcfa, 0, ',', ' ') . ' FCFA (' . number_format($amountEur, 2, ',', ' ') . ' €)',
+                    'description' => 'Total: ' . number_format($totalFcfa, 0, ',', ' ') . ' € (' . number_format($amountEur, 2, ',', ' ') . ' €)',
                     'images'      => [SITE_URL . '/logo.jpg'],
                 ],
             ],

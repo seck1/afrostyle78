@@ -2,7 +2,7 @@
 require_once '../config/config.php';
 require_once '../config/database.php';
 
-if (isset($_SESSION['admin_id'])) { header('Location: ' . ADMIN_URL); exit; }
+if (isset($_SESSION['admin_id'])) { header('Location: ' . ADMIN_URL . '/index.php'); exit; }
 
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($admin && password_verify($password, $admin['password'])) {
         $_SESSION['admin_id'] = $admin['id'];
         $_SESSION['admin_username'] = $admin['username'];
-        header('Location: ' . ADMIN_URL);
+        header('Location: ' . ADMIN_URL . '/index.php');
         exit;
     } else {
         $error = 'Identifiants incorrects.';
