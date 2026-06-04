@@ -455,7 +455,7 @@ body {
   margin-top: 48px;
   padding-top: 32px;
   border-top: 1px solid rgba(200,146,26,0.2);
-  width: fit-content;
+  width: 100%;
   animation: fadeUp 0.8s ease 0.5s both;
   flex-wrap: nowrap;
 }
@@ -525,16 +525,15 @@ body {
 }
 .hero-actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
   gap: 12px;
   animation: fadeUp 0.8s ease 0.4s both;
 }
 .hero-actions .btn-primary {
-  width: 100%;
   justify-content: center;
 }
 .hero-actions .btn-outline {
-  width: 100%;
   justify-content: center;
   padding: 14px 36px;
   font-size: 1rem;
@@ -829,7 +828,7 @@ body {
 }
 
 /* ============ CATEGORIES STRIP ============ */
-.categories-strip { background: var(--dark); padding: 40px 0; overflow: hidden; }
+.categories-strip { background: var(--dark); padding: 40px 0; overflow: visible; }
 
 /* SLIDER CATÉGORIES */
 .cat-slider-wrap {
@@ -900,37 +899,44 @@ body {
   font-size: 0.85rem;
   color: rgba(255,255,255,0.75);
 }
+/* Wrapper qui isole le contexte de scroll du overflow:hidden des ancêtres */
+.categories-scroll-outer {
+  width: 100%;
+  max-width: 100vw;
+  overflow: hidden;
+  position: relative;
+}
+
 .categories-scroll {
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   gap: 12px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding: 0 40px 8px;
+  /* overflow masqué — le défilement est géré par translateX, pas scrollLeft */
+  overflow: visible;
+  width: max-content;
+  box-sizing: border-box;
+  padding: 0 0 8px;
+  /* scroll-snap supprimé : il annulait les translateX sur iOS Safari */
+  will-change: transform;
+  touch-action: pan-x;
 }
-.categories-scroll::-webkit-scrollbar { display: none; }
 .cat-card {
   flex-shrink: 0;
-  width: 220px;
-  height: 200px;
+  width: 200px;
+  height: 300px;
   background: var(--dark-3);
   border: 1px solid rgba(200,146,26,0.12);
+  border-radius: 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
-  padding: 28px 20px;
+  padding: 0;
   text-decoration: none;
   transition: var(--transition);
   position: relative;
   overflow: hidden;
-}
-.cat-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(160deg, transparent 40%, rgba(200,146,26,0.18) 100%);
-  opacity: 0;
-  transition: var(--transition);
 }
 .cat-card::after {
   content: '';
@@ -940,9 +946,9 @@ body {
   background: var(--gold);
   transform: scaleX(0);
   transition: transform 0.3s ease;
+  z-index: 3;
 }
 .cat-card:hover { transform: translateY(-6px); border-color: rgba(200,146,26,0.4); box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
-.cat-card:hover::before { opacity: 1; }
 .cat-card:hover::after { transform: scaleX(1); }
 .cat-icon {
   position: absolute;
@@ -966,31 +972,44 @@ body {
   object-fit: cover;
   object-position: top center;
   transition: transform 0.5s ease;
-  opacity: 0.55;
+  opacity: 0.9;
 }
 .cat-card:hover .cat-photo img {
   transform: scale(1.06);
-  opacity: 0.7;
+  opacity: 1;
+}
+/* Dégradé bas pour lisibilité du texte */
+.cat-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 45%, rgba(0,0,0,0.75) 100%);
+  z-index: 1;
+  pointer-events: none;
 }
 .cat-name {
   font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--cream);
+  color: #fff;
   position: relative;
-  z-index: 1;
+  z-index: 2;
   text-align: center;
   word-break: keep-all;
   hyphens: none;
+  padding: 0 12px 4px;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.9);
 }
 .cat-count {
-  font-size: 1.17rem;
+  font-size: 0.78rem;
   color: var(--gold);
-  margin-top: 6px;
+  margin-top: 0;
   position: relative;
-  z-index: 1;
+  z-index: 2;
   letter-spacing: 0.06em;
+  padding: 0 12px 16px;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.8);
 }
 /* Distinct colors per cat */
 .cat-card:nth-child(2) { background: #1C1005; }
@@ -1665,11 +1684,63 @@ body {
   .section { padding: 48px 0; }
   .section-title { font-size: clamp(1.8rem, 5vw, 2.4rem); }
 
-  /* Categories */
-  .categories-scroll { padding: 0 20px 8px; gap: 8px; }
-  .cat-card { width: 140px; height: 160px; padding: 16px 12px; }
-  .cat-name { font-size: 0.82rem; }
-  .cat-count { font-size: 0.72rem; }
+  /* Categories — iOS Safari carousel fix (translateX, pas scrollLeft) */
+  .categories-scroll-outer {
+    overflow: hidden;
+    width: 100%;
+    max-width: 100vw;
+  }
+
+  .categories-scroll {
+    padding: 0 0 16px;
+    gap: 10px;
+    /* overflow et scroll-snap retirés — translateX gère tout */
+    overflow: visible;
+    width: max-content;
+    will-change: transform;
+    touch-action: pan-x;
+  }
+
+  .cat-card {
+    min-width: 48vw;
+    width: 48vw;
+    height: 68vw;
+    padding: 0;
+    flex-shrink: 0;
+    flex-grow: 0;
+    -webkit-user-select: none;
+    user-select: none;
+    justify-content: flex-end;
+    overflow: hidden;
+    border-radius: 8px;
+  }
+  .cat-photo {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background: #0d0905;
+  }
+  .cat-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    opacity: 0.95;
+  }
+  .cat-name {
+    padding: 0 10px 4px;
+    position: relative;
+    z-index: 2;
+    font-size: 0.88rem;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+  }
+  .cat-count {
+    padding: 0 10px 14px;
+    position: relative;
+    z-index: 2;
+    font-size: 0.72rem;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+  }
   .cat-icon { font-size: 2.5rem; }
 
   /* Products */
@@ -2351,6 +2422,14 @@ body {
    ============================================ */
 @media (max-width: 768px) {
 
+  /* ---- HERO : hauteur réduite ---- */
+  .hero { min-height: 0 !important; height: auto !important; }
+  .hero-content { padding: 32px 20px 28px !important; }
+  .hero-eyebrow { font-size: 0.72rem !important; margin-bottom: 12px !important; }
+  .hero-title { font-size: 2.4rem !important; margin-bottom: 12px !important; }
+  .hero-subtitle { font-size: 0.9rem !important; margin-bottom: 20px !important; line-height: 1.6 !important; }
+  .hero-stat-grid { margin-top: 20px !important; padding-top: 16px !important; }
+
   /* ---- NAVBAR : auth masqué dans la barre principale ---- */
   .navbar .nav-auth-links,
   .nav-auth-links {
@@ -2409,31 +2488,57 @@ body {
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: nowrap !important;
-    gap: 10px !important;
-    justify-content: center !important;
+    gap: 8px !important;
+    justify-content: flex-start !important;
     width: 100% !important;
     margin-top: 28px !important;
   }
-  .hero-actions .btn {
+  .hero-actions .btn,
+  .hero-actions .btn-primary,
+  .hero-actions .btn-outline {
     flex: 1 1 0 !important;
+    width: auto !important;
     min-width: 0 !important;
-    max-width: 50% !important;
-    font-size: 0.78rem !important;
-    padding: 12px 10px !important;
-    letter-spacing: 0.08em !important;
+    max-width: calc(50% - 4px) !important;
+    font-size: 0.72rem !important;
+    padding: 12px 6px !important;
+    letter-spacing: 0.06em !important;
     white-space: nowrap !important;
     text-align: center !important;
     justify-content: center !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
   /* ---- STATS HERO : 3 colonnes horizontales ---- */
   .hero-stat-grid {
-    display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
-    gap: 12px !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    width: calc(100% - 70px) !important;
+    box-sizing: border-box !important;
+    gap: 0 !important;
   }
-  .hero-stat-num { font-size: 1.6rem !important; }
-  .hero-stat-label { font-size: 0.68rem !important; }
+  .hero-stat {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    padding: 0 8px 0 0 !important;
+    margin-right: 8px !important;
+    overflow: hidden !important;
+  }
+  .hero-stat:last-child {
+    padding-right: 0 !important;
+    margin-right: 0 !important;
+  }
+  .hero-stat-num { font-size: 1.5rem !important; line-height: 1.1 !important; }
+  .hero-stat-label {
+    font-size: 0.75rem !important;
+    letter-spacing: 0.03em !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    line-height: 1.3 !important;
+    display: block !important;
+    margin-top: 4px !important;
+  }
 }
 
 /* --- Compte client : sidebar & contenu --- */
@@ -2542,9 +2647,17 @@ body {
 
 /* --- Correction overflow horizontal --- */
 @media (max-width: 768px) {
-  body { overflow-x: hidden; }
-  .section, .container, .hero { max-width: 100vw; overflow-x: hidden; }
+  /*
+   * overflow-x:hidden sur .container bloquait le scroll iOS des cartes catégories.
+   * On utilise overflow:clip à la place : clip visuellement SANS créer de contexte
+   * de scroll qui neutralise les descendants (comportement Safari iOS).
+   */
+  .container { max-width: 100vw; overflow-x: clip; }
+  .hero { max-width: 100vw; overflow-x: clip; }
   img { max-width: 100%; height: auto; }
+  .categories-strip { overflow: visible; }
+  .categories-scroll-outer { overflow: hidden !important; }
+  /* .categories-scroll : overflow géré par translateX — ne pas forcer overflow-x:auto ici */
 }
 
 /* Mobile très petit : auth links compacts */
@@ -2606,4 +2719,11 @@ body {
     transition: background 0.2s;
   }
   .mobile-auth-register:hover { background: #b8820f; }
+}
+
+/* Texte bouton hero adaptatif */
+.btn-text-short { display: none; }
+@media (max-width: 768px) {
+  .btn-text-full { display: none; }
+  .btn-text-short { display: inline; }
 }
