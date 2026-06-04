@@ -23,19 +23,37 @@ $stripeOk    = !empty($allSettings['stripe_secret_key']);
 $isPaid = $order && $order['payment_status'] === 'paid';
 $method = $order['payment_method'] ?? '';
 
+// Génération token CSRF
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 // Traitement confirmation Wave/OM manuel
 $confirmMsg   = '';
 $confirmError = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_mobile_payment']) && $order) {
+    // Vérification propriété commande
+    if (empty($_SESSION['customer_id']) || (int)$order['customer_id'] !== (int)$_SESSION['customer_id']) {
+        http_response_code(403);
+        exit('Accès refusé.');
+    }
+    // Vérification CSRF
+    if (!hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'] ?? '')) {
+        http_response_code(403);
+        exit('Token invalide.');
+    }
     $senderPhone = trim($_POST['sender_phone'] ?? '');
     if (!$senderPhone) {
         $confirmError = 'Veuillez entrer votre numéro de téléphone.';
+    } elseif (!preg_match('/^\+?[\d\s\-\.]{6,20}$/', $senderPhone)) {
+        $confirmError = 'Numéro de téléphone invalide.';
     } else {
         $db->prepare("UPDATE orders SET sender_phone=?, status='confirmed', payment_status='pending_verification' WHERE order_number=?")
            ->execute([$senderPhone, $orderNumber]);
         $db->prepare("INSERT INTO delivery_tracking (order_id, status, note) VALUES (?,?,?)")
            ->execute([$order['id'], 'confirmed', 'Paiement ' . strtoupper($method) . ' déclaré — numéro expéditeur : ' . $senderPhone . '. En attente de vérification.']);
         $confirmMsg = 'success';
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         $stmt = $db->prepare("SELECT o.*, c.first_name, c.last_name, c.email FROM orders o JOIN customers c ON o.customer_id=c.id WHERE o.order_number=?");
         $stmt->execute([$orderNumber]);
         $order = $stmt->fetch();
@@ -120,6 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_mobile_paymen
                 </div>
                 <form method="POST">
                     <input type="hidden" name="confirm_mobile_payment" value="1">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                     <div style="margin-bottom:16px;">
                         <label style="display:block; font-size:0.82rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px; color:var(--dark);">Votre numéro Wave ayant effectué le transfert *</label>
                         <input type="tel" name="sender_phone" placeholder="Ex: +221 77 000 00 00" required
@@ -151,6 +170,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_mobile_paymen
                 </div>
                 <form method="POST">
                     <input type="hidden" name="confirm_mobile_payment" value="1">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
                     <div style="margin-bottom:16px;">
                         <label style="display:block; font-size:0.82rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px; color:var(--dark);">Votre numéro Orange Money ayant effectué le transfert *</label>
                         <input type="tel" name="sender_phone" placeholder="Ex: +33 6 00 00 00 00" required
