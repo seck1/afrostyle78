@@ -2866,8 +2866,8 @@ body {
   /* Page commande padding */
   .form-section { padding: 20px 16px !important; }
 
-  /* Options livraison */
-  .delivery-option label { display: flex; flex-direction: column; gap: 4px; }
+  /* Options livraison — garder horizontal comme paiement */
+  .delivery-option label { display: flex; flex-direction: row; align-items: center; gap: 10px; }
   /* Produit détail padding */
   .product-detail { padding: 24px 0; }
   /* Panier récapitulatif padding */
