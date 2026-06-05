@@ -16,7 +16,7 @@ use Mpdf\Config\FontVariables;
 function generateInvoicePDF(array $order, array $items, array $customer): string
 {
     // Répertoire temporaire pour mPDF
-    $tmpDir = '/tmp/mpdf/';
+    $tmpDir = sys_get_temp_dir() . '/mpdf_' . uniqid();
     if (!is_dir($tmpDir)) {
         mkdir($tmpDir, 0777, true);
     }
