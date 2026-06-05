@@ -62,7 +62,9 @@ $total = $subtotal + $delivery;
         <div>
             <form method="POST" action="">
                 <input type="hidden" name="update_cart" value="1">
-                <table class="cart-table">
+
+                <!-- Desktop : tableau -->
+                <table class="cart-table cart-table-desktop">
                     <thead>
                         <tr>
                             <th colspan="2">Article</th>
@@ -119,6 +121,38 @@ $total = $subtotal + $delivery;
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+
+                <!-- Mobile : cartes -->
+                <div class="cart-cards-mobile">
+                    <?php foreach($cart as $key => $item): ?>
+                    <div style="display:flex; gap:12px; padding:16px 0; border-bottom:1px solid rgba(0,0,0,0.07); align-items:flex-start;">
+                        <div style="flex-shrink:0; width:72px; height:88px; background:var(--cream-2); overflow:hidden;">
+                            <?php if($item['image']): ?>
+                            <img src="<?= UPLOADS_URL . htmlspecialchars($item['image']) ?>" alt="" style="width:100%;height:100%;object-fit:cover;">
+                            <?php else: ?>
+                            <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2rem;">👗</div>
+                            <?php endif; ?>
+                        </div>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-family:'Cormorant Garamond',serif; font-size:1rem; font-weight:600; margin-bottom:4px;"><?= htmlspecialchars($item['name']) ?></div>
+                            <div style="font-size:0.82rem; color:var(--text-muted); margin-bottom:8px;">
+                                Taille : <?= htmlspecialchars($item['size']) ?>
+                                <?php if (!empty($item['color'])): ?> · <?= htmlspecialchars($item['color']) ?><?php endif; ?>
+                            </div>
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+                                <div class="qty-selector">
+                                    <button type="button" class="qty-btn" onclick="adjustQty('<?= htmlspecialchars(addslashes($key)) ?>', -1)">−</button>
+                                    <input type="number" name="qty[<?= htmlspecialchars($key) ?>]" class="qty-input cart-qty-input" value="<?= $item['quantity'] ?>" min="1" max="99" style="width:44px;">
+                                    <button type="button" class="qty-btn" onclick="adjustQty('<?= htmlspecialchars(addslashes($key)) ?>', 1)">+</button>
+                                </div>
+                                <div style="font-weight:700; font-size:1rem;"><?= number_format($item['price'] * $item['quantity'], 0, ',', ' ') ?> <?= CURRENCY ?></div>
+                            </div>
+                        </div>
+                        <a href="panier.php?remove=<?= urlencode($key) ?>" class="remove-btn" title="Supprimer" onclick="return confirm('Supprimer ?')" style="flex-shrink:0;">✕</a>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+
                 <div style="display:flex; gap:12px; margin-top:20px; flex-wrap:wrap;">
                     <button type="submit" class="btn btn-dark btn-sm">Mettre à jour le panier</button>
                     <a href="boutique.php" class="btn btn-outline btn-sm" style="border-color:var(--cream-2); color:var(--dark);">← Continuer les achats</a>

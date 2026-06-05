@@ -2868,3 +2868,30 @@ body {
     padding: 24px 16px !important;
   }
 }
+
+/* ============================================
+   PANIER MOBILE — cartes vs tableau
+   ============================================ */
+.cart-table-desktop { display: table; }
+.cart-cards-mobile  { display: none; }
+
+@media (max-width: 768px) {
+  .cart-table-desktop { display: none !important; }
+  .cart-cards-mobile  { display: block !important; }
+
+  /* Récapitulatif pleine largeur sans débordement */
+  .checkout-grid {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  .cart-summary {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    position: static !important;
+  }
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+  }
+}
