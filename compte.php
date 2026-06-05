@@ -155,6 +155,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
                                 <?= number_format($order['total_amount'], 0, ',', ' ') ?> €
                             </div>
                         </div>
+                        <?php if (!empty($order['sender_phone'])): ?>
+                        <div style="padding:8px 0; font-size:0.82rem; color:#7a6248; border-top:1px solid rgba(0,0,0,0.06); margin-top:8px;">
+                            📱 N° ayant effectué le paiement : <strong><?= htmlspecialchars($order['sender_phone']) ?></strong>
+                            <?php if ($order['payment_status'] === 'pending_verification'): ?>
+                            <span style="margin-left:8px; background:#ebf8ff; color:#2b6cb0; font-size:0.75rem; padding:2px 8px; border-radius:10px;">🔍 En cours de vérification</span>
+                            <?php elseif ($order['payment_status'] === 'paid'): ?>
+                            <span style="margin-left:8px; background:#f0fff4; color:#276749; font-size:0.75rem; padding:2px 8px; border-radius:10px;">✓ Paiement confirmé</span>
+                            <?php endif; ?>
+                        </div>
+                        <?php endif; ?>
                         <div class="order-card-footer">
                             <a href="<?= SITE_URL ?>/suivi.php?ref=<?= urlencode($order['order_number']) ?>" class="btn btn-outline btn-sm">Suivre la commande →</a>
                         </div>
