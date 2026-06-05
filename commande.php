@@ -152,11 +152,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Email confirmation — uniquement pour espèces (paiement immédiat sans vérification)
             if ($paymentMethod === 'cash') {
                 $orderForEmail = [
-                    'order_number'   => $orderNumber,
-                    'total_amount'   => $total,
-                    'delivery_fee'   => $delivery,
-                    'delivery_city'  => $city,
-                    'payment_method' => $paymentMethod,
+                    'order_number'    => $orderNumber,
+                    'total_amount'    => $total,
+                    'delivery_fee'    => $delivery,
+                    'delivery_address'=> $address,
+                    'delivery_city'   => $city,
+                    'payment_method'  => $paymentMethod,
+                    'sender_phone'    => '',
                 ];
                 $cartItems = array_values($cart);
                 $itemsForEmail = array_map(fn($i) => [

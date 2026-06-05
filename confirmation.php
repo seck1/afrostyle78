@@ -60,11 +60,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_mobile_paymen
         $items = $db->prepare("SELECT product_name, size, quantity, unit_price FROM order_items WHERE order_id=?");
         $items->execute([$order['id']]);
         $orderForEmail = [
-            'order_number'   => $orderNumber,
-            'total_amount'   => $order['total_amount'],
-            'delivery_fee'   => $order['delivery_fee'],
-            'delivery_city'  => $order['delivery_city'],
-            'payment_method' => $method,
+            'order_number'    => $orderNumber,
+            'total_amount'    => $order['total_amount'],
+            'delivery_fee'    => $order['delivery_fee'],
+            'delivery_address'=> $order['delivery_address'],
+            'delivery_city'   => $order['delivery_city'],
+            'payment_method'  => $method,
+            'sender_phone'    => $senderPhone,
         ];
         emailOrderConfirmation($order['email'], $order['first_name'], $orderForEmail, $items->fetchAll());
 
