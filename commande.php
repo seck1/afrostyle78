@@ -317,9 +317,8 @@ $total = $subtotal + $delivery;
                     <div class="form-section-title">Mode de paiement</div>
                     <p style="color:var(--text-muted);font-size:0.95rem;margin-bottom:16px;">Choisissez votre mode de paiement. Vous effectuerez le paiement à l'étape suivante.</p>
                     <div class="payment-options" id="payment-options">
-                        <!-- Afrique : Wave + Orange Money -->
-                        <div class="payment-option pay-africa" style="display:none;">
-                            <input type="radio" name="payment_method" id="pay_wave" value="wave">
+                        <div class="payment-option">
+                            <input type="radio" name="payment_method" id="pay_wave" value="wave" checked>
                             <label for="pay_wave">
                                 <span class="pay-icon">📱</span>
                                 <span class="pay-details">
@@ -328,7 +327,7 @@ $total = $subtotal + $delivery;
                                 </span>
                             </label>
                         </div>
-                        <div class="payment-option pay-africa" style="display:none;">
+                        <div class="payment-option">
                             <input type="radio" name="payment_method" id="pay_orange" value="orange_money">
                             <label for="pay_orange">
                                 <span class="pay-icon">📱</span>
@@ -338,8 +337,7 @@ $total = $subtotal + $delivery;
                                 </span>
                             </label>
                         </div>
-                        <!-- Europe : Carte bancaire -->
-                        <div class="payment-option pay-europe" style="display:none;">
+                        <div class="payment-option">
                             <input type="radio" name="payment_method" id="pay_carte" value="carte">
                             <label for="pay_carte">
                                 <span class="pay-icon">💳</span>
@@ -349,8 +347,7 @@ $total = $subtotal + $delivery;
                                 </span>
                             </label>
                         </div>
-                        <!-- Tous : Espèces -->
-                        <div class="payment-option pay-all">
+                        <div class="payment-option">
                             <input type="radio" name="payment_method" id="pay_cash" value="cash">
                             <label for="pay_cash">
                                 <span class="pay-icon">💵</span>
@@ -462,37 +459,10 @@ function filterShippingZones(countryCode) {
     document.getElementById('no-shipping').style.display = visible === 0 ? 'block' : 'none';
 }
 
-const AFRICA_COUNTRIES = ['SN','CI','ML','GN','MR','GH','CM'];
-
-function updatePaymentMethods(countryCode) {
-    const isAfrica = AFRICA_COUNTRIES.includes(countryCode);
-    document.querySelectorAll('.pay-africa').forEach(el => el.style.display = isAfrica ? '' : 'none');
-    document.querySelectorAll('.pay-europe').forEach(el => el.style.display = !isAfrica ? '' : 'none');
-
-    // Sélectionner automatiquement le premier mode visible
-    const firstVisible = document.querySelector('.payment-option:not([style*="display: none"]) input[type=radio], .payment-option:not([style*="display:none"]) input[type=radio]');
-    if (firstVisible && !document.querySelector('input[name=payment_method]:checked')) {
-        firstVisible.checked = true;
-    }
-    // Si le mode actuellement coché est masqué, recocher le premier visible
-    const checked = document.querySelector('input[name=payment_method]:checked');
-    if (checked) {
-        const parent = checked.closest('.payment-option');
-        if (parent && parent.style.display === 'none') {
-            checked.checked = false;
-            const first = document.querySelector('.payment-option:not([style*="display: none"]) input[type=radio]');
-            if (first) first.checked = true;
-        }
-    }
-}
-
 document.addEventListener('DOMContentLoaded', () => {
     const countrySelect = document.getElementById('country_select');
     filterShippingZones(countrySelect.value);
-    updatePaymentMethods(countrySelect.value);
-
-    countrySelect.addEventListener('change', () => updatePaymentMethods(countrySelect.value));
-
+    countrySelect.addEventListener('change', () => filterShippingZones(countrySelect.value));
     document.querySelectorAll('.shipping-opt input[type=radio]').forEach(r => {
         r.addEventListener('change', () => updateDeliveryPrice(r.value));
     });
