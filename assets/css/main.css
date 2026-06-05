@@ -1445,17 +1445,18 @@ body {
 .form-group textarea:focus { border-color: var(--gold); }
 .form-group textarea { resize: vertical; min-height: 80px; }
 .delivery-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.delivery-option { position: relative; }
+.delivery-option { position: relative; display: flex; align-items: center; border: 1.5px solid var(--cream-2); transition: border-color 0.2s, background 0.2s; }
 .delivery-option input { position: absolute; opacity: 0; }
 .delivery-option label {
   display: block;
   padding: 16px;
-  border: 1.5px solid var(--cream-2);
+  flex: 1;
   cursor: pointer;
   transition: var(--transition);
   font-size: 1.17rem;
+  border: none;
 }
-.delivery-option input:checked + label { border-color: var(--gold); background: rgba(200,146,26,0.05); }
+.delivery-option input:checked + label { background: transparent; }
 .delivery-option label strong { display: block; font-size: 1.17rem; color: var(--dark); margin-bottom: 4px; }
 
 /* ============ ORDER CONFIRMATION ============ */
@@ -2189,9 +2190,11 @@ body {
   margin-bottom: 20px;
 }
 .payment-option {
+  display: flex;
+  align-items: center;
   border: 1.5px solid #e0d8ce;
   background: #fff;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, background 0.2s;
 }
 .payment-option:has(input:checked) {
   border-color: var(--gold);
@@ -2203,6 +2206,7 @@ body {
   align-items: center;
   gap: 16px;
   padding: 16px 20px;
+  flex: 1;
   cursor: pointer;
 }
 .pay-icon { font-size: 1.6rem; flex-shrink: 0; }
