@@ -2954,3 +2954,16 @@ body {
   .delivery-option img,
   .pay-icon img { width: 40px !important; height: 40px !important; }
 }
+
+/* Formulaire commande mobile — compact */
+@media (max-width: 768px) {
+  .form-section { margin-bottom: 20px !important; }
+  .form-section-title { font-size: 0.72rem; margin-bottom: 14px; padding-bottom: 8px; }
+  .form-group { gap: 4px; }
+  .form-group label { font-size: 0.72rem; letter-spacing: 0.1em; }
+  .form-group input,
+  .form-group select,
+  .form-group textarea { padding: 10px 12px; font-size: 0.95rem; }
+  .form-grid { gap: 10px; }
+  .container h1[style] { font-size: 1.6rem !important; margin-bottom: 20px !important; }
+}
