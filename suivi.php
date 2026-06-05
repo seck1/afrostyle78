@@ -8,8 +8,8 @@ $order = null;
 $tracking = [];
 $error = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['order'])) {
-    $orderNum = trim($_POST['order_number'] ?? $_GET['order'] ?? '');
+if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['order']) || isset($_GET['ref'])) {
+    $orderNum = trim($_POST['order_number'] ?? $_GET['ref'] ?? $_GET['order'] ?? '');
     $email = trim($_POST['email'] ?? '');
 
     if ($orderNum) {
