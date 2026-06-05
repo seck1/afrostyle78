@@ -81,7 +81,7 @@ if ($unpaidOrders):
                 echo $pmLabels[$ord['payment_method']] ?? $ord['payment_method'];
                 ?>
                 <?php if(!empty($ord['sender_phone'])): ?>
-                <div style="margin-top:4px;font-size:0.82rem;color:#2b6cb0;font-weight:600;">📱 <?= htmlspecialchars($ord['sender_phone']) ?></div>
+                <div style="margin-top:4px;font-size:0.82rem;color:#2b6cb0;font-weight:600;">📱 N° ayant effectué le paiement : <?= htmlspecialchars($ord['sender_phone']) ?></div>
                 <?php endif; ?>
             </td>
             <td><?= date('d/m/Y H:i', strtotime($ord['created_at'])) ?></td>
