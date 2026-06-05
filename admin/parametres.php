@@ -12,6 +12,32 @@ $allowedKeys = [
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
+    // ── Créer un nouveau compte admin ────────────────────────────────────────
+    if (!empty($_POST['new_admin_username'])) {
+        $newUser  = trim($_POST['new_admin_username']);
+        $newEmail = trim($_POST['new_admin_email'] ?? '');
+        $newPw    = $_POST['new_admin_password'] ?? '';
+        $newPwCf  = $_POST['new_admin_password_confirm'] ?? '';
+
+        $exists = $db->prepare("SELECT id FROM admins WHERE username = ? OR email = ?");
+        $exists->execute([$newUser, $newEmail]);
+
+        if (!$newUser || !$newPw) {
+            $msg = 'error_new_admin_empty';
+        } elseif (strlen($newPw) < 6) {
+            $msg = 'error_new_admin_short';
+        } elseif ($newPw !== $newPwCf) {
+            $msg = 'error_new_admin_confirm';
+        } elseif ($exists->fetch()) {
+            $msg = 'error_new_admin_exists';
+        } else {
+            $hash = password_hash($newPw, PASSWORD_DEFAULT);
+            $db->prepare("INSERT INTO admins (username, email, password) VALUES (?, ?, ?)")
+               ->execute([$newUser, $newEmail ?: null, $hash]);
+            $msg = 'success_new_admin';
+        }
+    }
+
     // ── Modifier compte admin ─────────────────────────────────────────────────
     if (!empty($_POST['admin_new_password'])) {
         $adminCurrentPw  = $_POST['admin_current_password'] ?? '';
@@ -323,6 +349,72 @@ require_once 'includes/admin_header.php';
 </div>
 
 </form>
+</div>
+
+<!-- ═══ CRÉER UN COMPTE ADMIN ═══ -->
+<?php
+$adminList = $db->query("SELECT id, username, email, created_at FROM admins ORDER BY id")->fetchAll();
+?>
+<div class="admin-card" style="margin-top:32px;">
+    <div class="admin-card-header">
+        <div class="admin-card-title">👥 Comptes administrateurs (<?= count($adminList) ?>)</div>
+    </div>
+
+    <?php if ($msg === 'success_new_admin'): ?>
+        <div class="alert alert-success">✓ Nouveau compte admin créé avec succès.</div>
+    <?php elseif ($msg === 'error_new_admin_empty'): ?>
+        <div class="alert alert-error">⚠ Identifiant et mot de passe requis.</div>
+    <?php elseif ($msg === 'error_new_admin_short'): ?>
+        <div class="alert alert-error">⚠ Le mot de passe doit contenir au moins 6 caractères.</div>
+    <?php elseif ($msg === 'error_new_admin_confirm'): ?>
+        <div class="alert alert-error">⚠ Les mots de passe ne correspondent pas.</div>
+    <?php elseif ($msg === 'error_new_admin_exists'): ?>
+        <div class="alert alert-error">⚠ Un compte avec cet identifiant ou cet email existe déjà.</div>
+    <?php endif; ?>
+
+    <!-- Liste des admins -->
+    <table class="admin-table" style="margin-bottom:24px;">
+        <thead><tr><th>Identifiant</th><th>Email</th><th>Créé le</th></tr></thead>
+        <tbody>
+            <?php foreach ($adminList as $a): ?>
+            <tr>
+                <td><strong><?= htmlspecialchars($a['username']) ?></strong>
+                    <?php if ($a['id'] == $_SESSION['admin_id']): ?>
+                    <span style="background:#e8f5e9;color:#2e7d32;font-size:0.7rem;padding:2px 8px;border-radius:4px;margin-left:8px;">Vous</span>
+                    <?php endif; ?>
+                </td>
+                <td style="color:var(--muted);"><?= htmlspecialchars($a['email'] ?? '—') ?></td>
+                <td style="color:var(--muted);"><?= $a['created_at'] ? date('d/m/Y', strtotime($a['created_at'])) : '—' ?></td>
+            </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+
+    <!-- Formulaire création -->
+    <p style="font-size:0.78rem;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:16px;">Créer un nouveau compte</p>
+    <form method="POST" class="admin-form">
+        <div class="form-row">
+            <div>
+                <label>Identifiant *</label>
+                <input type="text" name="new_admin_username" placeholder="admin2" required>
+            </div>
+            <div>
+                <label>Email (optionnel)</label>
+                <input type="email" name="new_admin_email" placeholder="admin2@exemple.com">
+            </div>
+        </div>
+        <div class="form-row">
+            <div>
+                <label>Mot de passe *</label>
+                <input type="password" name="new_admin_password" placeholder="Min. 6 caractères" required minlength="6">
+            </div>
+            <div>
+                <label>Confirmer le mot de passe *</label>
+                <input type="password" name="new_admin_password_confirm" placeholder="Répétez" required minlength="6">
+            </div>
+        </div>
+        <button type="submit" class="btn-admin btn-dark">+ Créer le compte</button>
+    </form>
 </div>
 
 <!-- ═══ COMPTE ADMIN ═══ -->
