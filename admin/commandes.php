@@ -47,13 +47,18 @@ require_once 'includes/admin_header.php';
 <?php endif; ?>
 
 <?php
-// Commandes en attente de paiement
-$unpaidOrders = $db->query("SELECT o.*, c.first_name, c.last_name, c.phone, c.email FROM orders o JOIN customers c ON o.customer_id=c.id WHERE o.payment_status='unpaid' ORDER BY o.created_at DESC")->fetchAll();
+// Commandes en attente de paiement (unpaid + pending_verification)
+$unpaidOrders = $db->query("SELECT o.*, c.first_name, c.last_name, c.phone, c.email FROM orders o JOIN customers c ON o.customer_id=c.id WHERE o.payment_status IN ('unpaid','pending_verification') ORDER BY o.payment_status DESC, o.created_at DESC")->fetchAll();
+$pendingVerifCount = count(array_filter($unpaidOrders, fn($o) => $o['payment_status'] === 'pending_verification'));
 if ($unpaidOrders):
 ?>
 <div class="admin-card" style="border:2px solid #f6ad55;margin-bottom:24px;">
     <div class="admin-card-header" style="background:#fff8f0;">
-        <div class="admin-card-title" style="color:#c05621;">⏳ En attente de paiement (<?= count($unpaidOrders) ?>)</div>
+        <div class="admin-card-title" style="color:#c05621;">⏳ En attente de paiement (<?= count($unpaidOrders) ?>)
+            <?php if($pendingVerifCount > 0): ?>
+            <span style="margin-left:12px;background:#3182ce;color:#fff;font-size:0.78rem;padding:3px 10px;border-radius:10px;">🔍 <?= $pendingVerifCount ?> à vérifier</span>
+            <?php endif; ?>
+        </div>
     </div>
     <table class="admin-table">
         <thead><tr>
@@ -61,15 +66,23 @@ if ($unpaidOrders):
         </tr></thead>
         <tbody>
         <?php foreach($unpaidOrders as $ord): ?>
-        <tr style="background:#fffaf0;">
-            <td><strong><?= htmlspecialchars($ord['order_number']) ?></strong></td>
+        <tr style="background:<?= $ord['payment_status']==='pending_verification' ? '#ebf8ff' : '#fffaf0' ?>;">
+            <td>
+                <strong><?= htmlspecialchars($ord['order_number']) ?></strong>
+                <?php if($ord['payment_status']==='pending_verification'): ?>
+                <div style="margin-top:4px;"><span style="background:#3182ce;color:#fff;font-size:0.72rem;padding:2px 8px;border-radius:10px;">🔍 À vérifier</span></div>
+                <?php endif; ?>
+            </td>
             <td><?= htmlspecialchars($ord['first_name'].' '.$ord['last_name']) ?><br><small><?= htmlspecialchars($ord['phone']) ?></small></td>
             <td><strong><?= number_format($ord['total_amount'],2,',',' ') ?> €</strong></td>
             <td>
                 <?php
-                $pmLabels = ['wave'=>'📱 Wave','orange_money'=>'📱 Orange Money','virement'=>'🏦 Virement','cash'=>'💵 Espèces'];
+                $pmLabels = ['wave'=>'📱 Wave','orange_money'=>'📱 Orange Money','virement'=>'🏦 Virement','cash'=>'💵 Espèces','carte'=>'💳 Carte'];
                 echo $pmLabels[$ord['payment_method']] ?? $ord['payment_method'];
                 ?>
+                <?php if(!empty($ord['sender_phone'])): ?>
+                <div style="margin-top:4px;font-size:0.82rem;color:#2b6cb0;font-weight:600;">📱 <?= htmlspecialchars($ord['sender_phone']) ?></div>
+                <?php endif; ?>
             </td>
             <td><?= date('d/m/Y H:i', strtotime($ord['created_at'])) ?></td>
             <td style="display:flex;gap:6px;">
