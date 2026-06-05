@@ -128,11 +128,16 @@ if ($step === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
 </table></td></tr></table></body></html>';
 
-            $embeds = file_exists($logoPath) ? ['afrostyle_logo' => $logoPath] : [];
-            sendMail($email, $customer['first_name'], 'Réinitialisation de votre mot de passe', $html, $embeds);
+            $embeds  = file_exists($logoPath) ? ['afrostyle_logo' => $logoPath] : [];
+            $sent    = sendMail($email, $customer['first_name'], '🔑 Réinitialisation de votre mot de passe AfroStyle', $html, $embeds);
+            if (!$sent) {
+                $errors[] = 'Erreur lors de l\'envoi de l\'email. Veuillez réessayer ou contacter le support.';
+            }
         }
 
-        $success = 'Si un compte existe avec cette adresse email, vous recevrez un lien de réinitialisation dans quelques minutes.';
+        if (empty($errors)) {
+            $success = 'Si un compte existe avec cette adresse email, vous recevrez un lien de réinitialisation dans quelques minutes.';
+        }
     }
 }
 ?>
