@@ -70,27 +70,48 @@ function generateInvoicePDF(array $order, array $items, array $customer): string
         $rowIdx++;
 
         // Image produit — essayer plusieurs chemins possibles
-        $imgHtml = '<div style="width:52px;height:52px;background:#f0ebe0;border:1px solid #e0d8cc;text-align:center;line-height:52px;font-size:10px;color:#7a6248;">👗</div>';
+        $imgHtml = '<div style="width:52px;height:52px;background:#f0ebe0;border:1px solid #e0d8cc;text-align:center;line-height:52px;font-size:10px;color:#7a6248;">IMG</div>';
         $rawImages = $item['product_images'] ?? '';
+
+        // Chemins absolus possibles pour le répertoire uploads/products/
+        $uploadsBasePaths = [
+            '/homepages/31/d971979113/htdocs/afrostyle/uploads/products/', // IONOS production
+            __DIR__ . '/../uploads/products/',                              // chemin relatif au fichier
+        ];
+
+        error_log('[Invoice] product_images raw: ' . $rawImages);
+
         $candidates = [];
         if ($rawImages) {
             $decoded = json_decode($rawImages, true);
-            if (is_array($decoded)) {
-                $candidates = $decoded; // JSON array
-            } else {
-                $candidates = [$rawImages]; // single filename
+            if (is_array($decoded) && count($decoded) > 0) {
+                $candidates = array_values(array_filter($decoded)); // JSON array
+                error_log('[Invoice] decoded JSON array: ' . implode(', ', $candidates));
+            } elseif (is_string($rawImages) && $rawImages !== '') {
+                $candidates = [trim($rawImages)]; // single filename
+                error_log('[Invoice] single filename: ' . $rawImages);
             }
         }
+
         foreach ($candidates as $imgFile) {
+            $imgFile = trim($imgFile);
             if (!$imgFile) continue;
-            $imgPath = __DIR__ . '/../uploads/products/' . $imgFile;
-            if (file_exists($imgPath)) {
-                $ext     = strtolower(pathinfo($imgPath, PATHINFO_EXTENSION));
-                $mimeMap = ['jpg'=>'image/jpeg','jpeg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp','gif'=>'image/gif'];
-                $mime    = $mimeMap[$ext] ?? 'image/jpeg';
-                $imgData = base64_encode(file_get_contents($imgPath));
-                $imgHtml = '<img src="data:' . $mime . ';base64,' . $imgData . '" style="width:52px;height:52px;object-fit:cover;border:1px solid #e0d8cc;" />';
-                break;
+            // Enlever un éventuel préfixe de chemin — garder juste le nom de fichier
+            $imgFile = basename($imgFile);
+            foreach ($uploadsBasePaths as $basePath) {
+                $imgPath = $basePath . $imgFile;
+                error_log('[Invoice] trying path: ' . $imgPath);
+                if (file_exists($imgPath)) {
+                    $ext     = strtolower(pathinfo($imgPath, PATHINFO_EXTENSION));
+                    $mimeMap = ['jpg'=>'image/jpeg','jpeg'=>'image/jpeg','png'=>'image/png','webp'=>'image/webp','gif'=>'image/gif'];
+                    $mime    = $mimeMap[$ext] ?? 'image/jpeg';
+                    $imgData = base64_encode(file_get_contents($imgPath));
+                    $imgHtml = '<img src="data:' . $mime . ';base64,' . $imgData . '" style="width:52px;height:52px;object-fit:cover;border:1px solid #e0d8cc;" />';
+                    error_log('[Invoice] image loaded OK: ' . $imgPath);
+                    break 2;
+                } else {
+                    error_log('[Invoice] file NOT found: ' . $imgPath);
+                }
             }
         }
 
@@ -203,7 +224,7 @@ function generateInvoicePDF(array $order, array $items, array $customer): string
 </table>
 
 <!-- ═══ TOTAUX ═══ -->
-<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:0;">
+<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
   <tr>
     <td style="width:55%;"></td>
     <td style="width:45%; padding:0 48px 0 0;">
@@ -217,7 +238,7 @@ function generateInvoicePDF(array $order, array $items, array $customer): string
           <td style="padding:10px 16px; text-align:right; font-size:13px; color:#1a1008; background:#fffbf4; border-bottom:1px solid #e8dcc8;">' . $deliveryStr . '</td>
         </tr>
         <tr>
-          <td style="padding:14px 16px; font-size:15px; font-weight:bold; color:#ffffff; background:#1a1008;">Total TTC</td>
+          <td style="padding:14px 16px; font-size:15px; font-weight:bold; color:#ffffff !important; background:#1a1008;">Total TTC</td>
           <td style="padding:14px 16px; text-align:right; font-size:17px; font-weight:bold; color:#c8921a; background:#1a1008;">' . number_format($totalTTC, 2, ',', ' ') . ' €</td>
         </tr>
       </table>
