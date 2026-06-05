@@ -185,7 +185,7 @@ $allStatuses = ['pending','confirmed','in_production','shipped','delivered'];
                 <?php endif; ?>
                 <?php if(!empty($t['photo'])): ?>
                 <div style="margin-top:10px;">
-                    <img src="<?= UPLOADS_URL ?>colis/<?= htmlspecialchars($t['photo']) ?>" alt="Photo colis" style="max-width:200px; max-height:150px; object-fit:cover; border:1px solid var(--cream-2);">
+                    <img src="<?= SITE_URL ?>/uploads/colis/<?= htmlspecialchars($t['photo']) ?>" alt="Photo colis" style="max-width:100%; max-height:220px; object-fit:cover; border:1px solid var(--cream-2); border-radius:4px;">
                 </div>
                 <?php endif; ?>
             </div>
