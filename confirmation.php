@@ -34,9 +34,11 @@ if (empty($_SESSION['csrf_token'])) {
 $confirmMsg   = '';
 $confirmError = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_mobile_payment']) && $order) {
-    // Vérification propriété commande (client connecté OU commande accessible via URL avec le bon numéro)
+    // Vérification propriété commande
     $isOwner = !empty($_SESSION['customer_id']) && (int)$order['customer_id'] === (int)$_SESSION['customer_id'];
-    $isGuest = empty($_SESSION['customer_id']) && !empty($orderNumber) && $order['order_number'] === $orderNumber;
+    $token   = $_GET['t'] ?? $_POST['confirm_token_get'] ?? '';
+    $isGuest = empty($_SESSION['customer_id']) && !empty($token) && !empty($order['confirm_token'])
+               && hash_equals($order['confirm_token'], $token);
     if (!$isOwner && !$isGuest) {
         http_response_code(403);
         exit('Accès refusé.');
@@ -163,6 +165,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_mobile_paymen
                 <form method="POST">
                     <input type="hidden" name="confirm_mobile_payment" value="1">
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+                    <input type="hidden" name="confirm_token_get" value="<?= htmlspecialchars($_GET['t'] ?? '') ?>">
                     <div style="margin-bottom:16px;">
                         <label style="display:block; font-size:0.82rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px; color:var(--dark);">Votre numéro Wave ayant effectué le transfert *</label>
                         <input type="tel" name="sender_phone" placeholder="Ex: +221 77 000 00 00" required
@@ -199,6 +202,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_mobile_paymen
                 <form method="POST">
                     <input type="hidden" name="confirm_mobile_payment" value="1">
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+                    <input type="hidden" name="confirm_token_get" value="<?= htmlspecialchars($_GET['t'] ?? '') ?>">
                     <div style="margin-bottom:16px;">
                         <label style="display:block; font-size:0.82rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:8px; color:var(--dark);">Votre numéro Orange Money ayant effectué le transfert *</label>
                         <input type="tel" name="sender_phone" placeholder="Ex: +33 6 00 00 00 00" required

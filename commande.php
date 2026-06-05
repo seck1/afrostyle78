@@ -120,12 +120,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             // Create order
-            $orderNumber = 'AFS-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
+            $orderNumber  = 'AFS-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
+            $confirmToken = bin2hex(random_bytes(32));
             $total = $subtotal + $delivery;
-            // Commande créée en attente de paiement
-            $initPaymentStatus = ($paymentMethod === 'cash') ? 'unpaid' : 'unpaid';
-            $stmtOrder = $db->prepare("INSERT INTO orders (order_number, customer_id, total_amount, delivery_method, delivery_address, delivery_city, delivery_fee, payment_method, payment_status, notes, status) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
-            $stmtOrder->execute([$orderNumber, $customerId, $total, $deliveryMethod, $address, $city, $delivery, $paymentMethod, $initPaymentStatus, $notes, 'pending']);
+            $stmtOrder = $db->prepare("INSERT INTO orders (order_number, customer_id, total_amount, delivery_method, delivery_address, delivery_city, delivery_fee, payment_method, payment_status, notes, status, confirm_token) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)");
+            $stmtOrder->execute([$orderNumber, $customerId, $total, $deliveryMethod, $address, $city, $delivery, $paymentMethod, 'unpaid', $notes, 'pending', $confirmToken]);
             $orderId = $db->lastInsertId();
 
             // Insert order items
@@ -175,7 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['last_order'] = ['number' => $orderNumber, 'total' => $total, 'name' => "$firstName $lastName"];
 
             ob_end_clean();
-            header('Location: ' . SITE_URL . '/confirmation.php?order=' . $orderNumber);
+            header('Location: ' . SITE_URL . '/confirmation.php?order=' . $orderNumber . '&t=' . $confirmToken);
             exit;
 
         } catch (PDOException $e) {
