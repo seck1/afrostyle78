@@ -27,6 +27,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $msg = '<div class="alert alert-success">Statut mis à jour — email envoyé au client.</div>';
         $order['status'] = $newStatus;
     }
+    if (isset($_POST['mark_paid_id'])) {
+        $db->prepare("UPDATE orders SET payment_status='paid', status='confirmed' WHERE id=?")->execute([$id]);
+        $db->prepare("INSERT INTO delivery_tracking (order_id, status, note) VALUES (?,?,?)")->execute([$id, 'confirmed', 'Paiement reçu et confirmé par l\'admin.']);
+        emailStatusUpdate($order['email'], $order['first_name'], $order, 'confirmed', 'Votre paiement a été reçu et confirmé.');
+        $msg = '<div class="alert alert-success">✓ Paiement marqué comme reçu — email envoyé au client.</div>';
+        $order['payment_status'] = 'paid';
+        $order['status'] = 'confirmed';
+    }
     if (isset($_POST['add_tracking'])) {
         $note = trim($_POST['tracking_note'] ?? '');
         $location = trim($_POST['tracking_location'] ?? '');
@@ -207,12 +215,11 @@ require_once 'includes/admin_header.php';
                     <strong style="color:#c8921a;"><?= htmlspecialchars($order['sender_phone']) ?></strong>
                 </div>
                 <?php endif; ?>
-                <?php if($order['payment_status'] === 'unpaid' || $order['payment_status'] === 'pending_verification'): ?>
-                <form method="POST" style="margin-top:8px;">
-                    <input type="hidden" name="status" value="<?= $order['status'] ?>">
-                    <button type="submit" name="add_tracking" class="btn-admin btn-gold" style="width:100%; justify-content:center;"
-                        onclick="document.querySelector('[name=tracking_note]').value='Paiement reçu et confirmé.'; <?= '' ?>">
-                        Marquer comme payé
+                <?php if($order['payment_status'] !== 'paid'): ?>
+                <form method="POST" style="margin-top:8px;" onsubmit="return confirm('Confirmer le paiement de cette commande ?');">
+                    <input type="hidden" name="mark_paid_id" value="<?= $order['id'] ?>">
+                    <button type="submit" class="btn-admin btn-gold" style="width:100%; justify-content:center;">
+                        ✓ Marquer comme payé
                     </button>
                 </form>
                 <?php endif; ?>
