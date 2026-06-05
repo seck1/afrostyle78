@@ -75,7 +75,7 @@ function generateInvoicePDF(array $order, array $items, array $customer): string
 
         // Chemins absolus possibles pour le répertoire uploads/products/
         $uploadsBasePaths = [
-            defined('UPLOADS_DIR') ? UPLOADS_DIR : (__DIR__ . '/../uploads/products/'),
+            realpath(__DIR__ . '/../uploads/products') . DIRECTORY_SEPARATOR,
         ];
 
         error_log('[Invoice] product_images raw: ' . $rawImages);
