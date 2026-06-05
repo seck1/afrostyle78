@@ -25,7 +25,7 @@ function generateInvoicePDF(array $order, array $items, array $customer): string
         'mode'          => 'utf-8',
         'format'        => 'A4',
         'margin_top'    => 0,
-        'margin_bottom' => 20,
+        'margin_bottom' => 35,
         'margin_left'   => 0,
         'margin_right'  => 0,
         'tempDir'       => $tmpDir,
