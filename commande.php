@@ -261,7 +261,14 @@ $total = $subtotal + $delivery;
                     <!-- OPTIONS LIVRAISON DYNAMIQUES -->
                     <div id="shipping-options">
                     <?php foreach ($shippingZones as $z):
-                        $typeIcon = ['local'=>'🏪','national'=>'🚚','international'=>'✈️'][$z['zone_type']] ?? '📦';
+                        // Logo transporteur ou emoji selon le nom
+                        $carrierLogos = [
+                            'Colissimo'     => '<img src="'.SITE_URL.'/assets/logocolissimo.webp" alt="Colissimo" style="height:22px;width:auto;object-fit:contain;vertical-align:middle;">',
+                            'Chronopost'    => '<img src="'.SITE_URL.'/assets/logochronoposte.png" alt="Chronopost" style="height:22px;width:auto;object-fit:contain;vertical-align:middle;">',
+                            'Mondial Relay' => '<img src="'.SITE_URL.'/assets/logomondialrelay.png" alt="Mondial Relay" style="height:22px;width:auto;object-fit:contain;vertical-align:middle;">',
+                        ];
+                        $methodName = trim($z['method']);
+                        $typeIcon = $carrierLogos[$methodName] ?? (['local'=>'🏪','national'=>'🚚','international'=>'✈️'][$z['zone_type']] ?? '📦');
                         $isSelected = $z['id'] === $selectedZoneId;
                         $countries = $z['countries'] ? array_map('trim', explode(',', $z['countries'])) : [];
                         $dataCountries = $z['countries'] ? htmlspecialchars($z['countries']) : 'ALL';
