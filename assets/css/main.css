@@ -1457,7 +1457,8 @@ body {
   border: none;
 }
 .delivery-option input:checked + label { background: transparent; }
-.delivery-option label strong { display: block; font-size: 1.17rem; color: var(--dark); margin-bottom: 4px; }
+.delivery-option label strong { display: block; font-size: 1rem; color: var(--dark); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.delivery-option label small { font-size: 0.82rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
 
 /* ============ ORDER CONFIRMATION ============ */
 .confirmation-box { max-width: 640px; margin: 80px auto; text-align: center; padding: 60px 40px; background: var(--white); border-top: 4px solid var(--gold); }
