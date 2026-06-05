@@ -3,7 +3,7 @@ $pageTitle = 'Accueil';
 require_once 'includes/header.php';
 
 $db = getDB();
-$featured    = $db->query("SELECT p.*, c.name as cat_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.featured=1 AND p.active=1 LIMIT 20")->fetchAll();
+$featured    = $db->query("SELECT p.*, c.name as cat_name FROM products p LEFT JOIN categories c ON p.category_id = c.id WHERE p.featured=1 AND p.active=1 LIMIT 32")->fetchAll();
 $allCats     = $db->query("SELECT cat.*, COUNT(p.id) as prod_count FROM categories cat LEFT JOIN products p ON p.category_id = cat.id GROUP BY cat.id")->fetchAll();
 $catIcons    = ['robes'=>'👗','ensemble-homme'=>'🧥','ensemble-femme'=>'👘','accessoires'=>'💎','bazin'=>'🪡'];
 $catAllImage = $db->query("SELECT setting_value FROM settings WHERE setting_key='cat_all_image'")->fetchColumn();
