@@ -47,16 +47,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         ];
 
         // Générer et envoyer la facture PDF
+        $emailSent = false;
+        $emailError = '';
         try {
             $pdfString = generateInvoicePDF($order, $invoiceItems, $invoiceCustomer);
-            emailPaymentConfirmedWithInvoice($order['email'], $order['first_name'], $order, $invoiceItems, $pdfString);
+            $emailSent = emailPaymentConfirmedWithInvoice($order['email'], $order['first_name'], $order, $invoiceItems, $pdfString);
+            if (!$emailSent) $emailError = 'Envoi email échoué (vérifier config SMTP).';
         } catch (\Throwable $e) {
+            $emailError = $e->getMessage();
             error_log('Invoice PDF error: ' . $e->getMessage());
-            // Fallback: envoyer l'email sans facture
-            emailStatusUpdate($order['email'], $order['first_name'], $order, 'confirmed', 'Votre paiement a été reçu et confirmé.');
+            // Fallback sans PDF
+            try {
+                $emailSent = emailStatusUpdate($order['email'], $order['first_name'], $order, 'confirmed', 'Votre paiement a été reçu et confirmé.');
+            } catch (\Throwable $e2) {
+                error_log('Fallback email error: ' . $e2->getMessage());
+            }
         }
 
-        $msg = '<div class="alert alert-success">✓ Paiement marqué comme reçu — email avec facture PDF envoyé au client.</div>';
+        if ($emailSent) {
+            $msg = '<div class="alert alert-success">✓ Paiement marqué comme reçu — email avec facture PDF envoyé.</div>';
+        } else {
+            $msg = '<div class="alert alert-success">✓ Paiement marqué comme reçu.</div><div class="alert alert-error">⚠ Email non envoyé : ' . htmlspecialchars($emailError) . '</div>';
+        }
         $order['payment_status'] = 'paid';
         $order['status'] = 'confirmed';
     }
