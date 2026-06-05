@@ -149,22 +149,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->prepare("INSERT INTO delivery_tracking (order_id, status, note) VALUES (?,?,?)")
                ->execute([$orderId, 'pending', 'Commande reçue et en attente de validation.']);
 
-            // Email confirmation commande
-            $orderForEmail = [
-                'order_number'   => $orderNumber,
-                'total_amount'   => $total,
-                'delivery_fee'   => $delivery,
-                'delivery_city'  => $city,
-                'payment_method' => $paymentMethod,
-            ];
-            $cartItems = array_values($cart);
-            $itemsForEmail = array_map(fn($i) => [
-                'product_name' => $i['name'],
-                'size'         => $i['size'],
-                'quantity'     => $i['quantity'],
-                'unit_price'   => $i['price'],
-            ], $cartItems);
-            emailOrderConfirmation($email, $firstName, $orderForEmail, $itemsForEmail);
+            // Email confirmation — uniquement pour espèces (paiement immédiat sans vérification)
+            if ($paymentMethod === 'cash') {
+                $orderForEmail = [
+                    'order_number'   => $orderNumber,
+                    'total_amount'   => $total,
+                    'delivery_fee'   => $delivery,
+                    'delivery_city'  => $city,
+                    'payment_method' => $paymentMethod,
+                ];
+                $cartItems = array_values($cart);
+                $itemsForEmail = array_map(fn($i) => [
+                    'product_name' => $i['name'],
+                    'size'         => $i['size'],
+                    'quantity'     => $i['quantity'],
+                    'unit_price'   => $i['price'],
+                ], $cartItems);
+                emailOrderConfirmation($email, $firstName, $orderForEmail, $itemsForEmail);
+            }
 
             // Clear cart & redirect
             $_SESSION['cart'] = [];

@@ -52,6 +52,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_mobile_paymen
            ->execute([$senderPhone, $orderNumber]);
         $db->prepare("INSERT INTO delivery_tracking (order_id, status, note) VALUES (?,?,?)")
            ->execute([$order['id'], 'confirmed', 'Paiement ' . strtoupper($method) . ' déclaré — numéro expéditeur : ' . $senderPhone . '. En attente de vérification.']);
+
+        // Envoyer l'email de confirmation maintenant que le paiement est déclaré
+        require_once __DIR__ . '/config/mailer.php';
+        $items = $db->prepare("SELECT product_name, size, quantity, unit_price FROM order_items WHERE order_id=?");
+        $items->execute([$order['id']]);
+        $orderForEmail = [
+            'order_number'   => $orderNumber,
+            'total_amount'   => $order['total_amount'],
+            'delivery_fee'   => $order['delivery_fee'],
+            'delivery_city'  => $order['delivery_city'],
+            'payment_method' => $method,
+        ];
+        emailOrderConfirmation($order['email'], $order['first_name'], $orderForEmail, $items->fetchAll());
+
         $confirmMsg = 'success';
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         $stmt = $db->prepare("SELECT o.*, c.first_name, c.last_name, c.email FROM orders o JOIN customers c ON o.customer_id=c.id WHERE o.order_number=?");
