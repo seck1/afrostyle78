@@ -11,6 +11,39 @@ $allowedKeys = [
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    // ── Modifier compte admin ─────────────────────────────────────────────────
+    if (!empty($_POST['admin_new_password'])) {
+        $adminCurrentPw  = $_POST['admin_current_password'] ?? '';
+        $adminNewPw      = $_POST['admin_new_password'] ?? '';
+        $adminNewPwConf  = $_POST['admin_new_password_confirm'] ?? '';
+        $adminNewUser    = trim($_POST['admin_username'] ?? '');
+
+        $admin = $db->prepare("SELECT * FROM admins WHERE id = ?");
+        $admin->execute([$_SESSION['admin_id']]);
+        $adminRow = $admin->fetch();
+
+        if (!$adminRow || !password_verify($adminCurrentPw, $adminRow['password'])) {
+            $msg = 'error_admin_pw';
+        } elseif (strlen($adminNewPw) < 6) {
+            $msg = 'error_admin_short';
+        } elseif ($adminNewPw !== $adminNewPwConf) {
+            $msg = 'error_admin_confirm';
+        } else {
+            $hash = password_hash($adminNewPw, PASSWORD_DEFAULT);
+            $updates = "password = ?";
+            $params  = [$hash];
+            if ($adminNewUser) {
+                $updates .= ", username = ?";
+                $params[] = $adminNewUser;
+                $_SESSION['admin_username'] = $adminNewUser;
+            }
+            $params[] = $_SESSION['admin_id'];
+            $db->prepare("UPDATE admins SET $updates WHERE id = ?")->execute($params);
+            $msg = 'success_admin';
+        }
+    }
+
     // Sauvegarder config email dans mail.php
     if (!empty($_POST['mail_username'])) {
         $mailUsername  = trim($_POST['mail_username']);
@@ -290,6 +323,49 @@ require_once 'includes/admin_header.php';
 </div>
 
 </form>
+</div>
+
+<!-- ═══ COMPTE ADMIN ═══ -->
+<div class="admin-card" style="margin-top:32px;">
+    <div class="admin-card-header">
+        <div class="admin-card-title">🔐 Compte administrateur</div>
+    </div>
+
+    <?php if ($msg === 'success_admin'): ?>
+        <div class="alert alert-success">✓ Compte administrateur mis à jour avec succès.</div>
+    <?php elseif ($msg === 'error_admin_pw'): ?>
+        <div class="alert alert-error">⚠ Mot de passe actuel incorrect.</div>
+    <?php elseif ($msg === 'error_admin_short'): ?>
+        <div class="alert alert-error">⚠ Le nouveau mot de passe doit contenir au moins 6 caractères.</div>
+    <?php elseif ($msg === 'error_admin_confirm'): ?>
+        <div class="alert alert-error">⚠ Les nouveaux mots de passe ne correspondent pas.</div>
+    <?php endif; ?>
+
+    <form method="POST" class="admin-form">
+        <div class="form-row">
+            <div>
+                <label>Nom d'utilisateur</label>
+                <input type="text" name="admin_username"
+                       value="<?= htmlspecialchars($_SESSION['admin_username'] ?? '') ?>"
+                       placeholder="admin">
+            </div>
+            <div>
+                <label>Mot de passe actuel *</label>
+                <input type="password" name="admin_current_password" placeholder="••••••••" required>
+            </div>
+        </div>
+        <div class="form-row">
+            <div>
+                <label>Nouveau mot de passe *</label>
+                <input type="password" name="admin_new_password" placeholder="Min. 6 caractères" required minlength="6">
+            </div>
+            <div>
+                <label>Confirmer le nouveau mot de passe *</label>
+                <input type="password" name="admin_new_password_confirm" placeholder="Répétez le mot de passe" required minlength="6">
+            </div>
+        </div>
+        <button type="submit" class="btn-admin btn-gold">Mettre à jour le compte</button>
+    </form>
 </div>
 
 <script>
