@@ -44,127 +44,76 @@ function sendMail(string $toEmail, string $toName, string $subject, string $html
 function emailWelcome(string $email, string $firstName, string $lastName): bool {
     $fullName  = htmlspecialchars($firstName . ' ' . $lastName);
     $subject   = '✦ Bienvenue chez AfroStyle, ' . $firstName . ' !';
-    $logoPath  = __DIR__ . '/../logo.jpg';
-    $logoTag   = file_exists($logoPath)
-        ? '<img src="cid:afrostyle_logo" alt="AfroStyle" style="height:160px;width:160px;object-fit:contain;border-radius:50%;">'
-        : '<span style="color:#c8921a;font-size:28px;font-weight:bold;">AfroStyle</span>';
+    $logoUrl = 'https://afrostyle78.com/logo.jpg';
 
     $html = '<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bienvenue chez AfroStyle</title>
+<title>Bienvenue chez AfroStyle78</title>
 </head>
 <body style="margin:0;padding:0;background:#f5f0e8;font-family:Georgia,serif;">
 
-<!-- WRAPPER -->
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f5f0e8;padding:40px 0;">
 <tr><td align="center">
 <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
 
   <!-- HEADER -->
   <tr>
-    <td style="background:#1a1008;padding:36px 48px 28px;text-align:center;border-bottom:2px solid #c8921a;">
-      <div style="margin-bottom:14px;">' . $logoTag . '</div>
-      <h1 style="margin:0 0 4px;color:#f5f0e8;font-family:Georgia,serif;font-size:32px;font-weight:400;letter-spacing:2px;">AfroStyle</h1>
-      <p style="margin:0;color:rgba(245,240,232,0.5);font-size:12px;letter-spacing:3px;">✦ DAKAR, SÉNÉGAL ✦</p>
+    <td style="background:#1a1008;padding:32px 48px;text-align:center;border-bottom:2px solid #c8921a;">
+      <img src="' . $logoUrl . '" alt="AfroStyle78" style="height:100px;width:100px;object-fit:contain;border-radius:50%;display:block;margin:0 auto 14px;">
+      <h1 style="margin:0 0 4px;color:#f5f0e8;font-family:Georgia,serif;font-size:28px;font-weight:400;letter-spacing:2px;">AfroStyle78</h1>
+      <p style="margin:0;color:rgba(245,240,232,0.5);font-size:11px;letter-spacing:3px;">✦ GUYANCOURT, YVELINES (78) ✦</p>
     </td>
   </tr>
 
   <!-- BODY -->
   <tr>
-    <td style="background:#ffffff;padding:48px 48px 40px;">
-
+    <td style="background:#ffffff;padding:40px 48px;">
       <p style="margin:0 0 8px;color:#c8921a;font-size:12px;letter-spacing:3px;text-transform:uppercase;">Bienvenue</p>
-      <h2 style="margin:0 0 24px;color:#1a1008;font-family:Georgia,serif;font-size:28px;font-weight:400;">
-        Bonjour ' . $fullName . ',
-      </h2>
-
-      <p style="margin:0 0 20px;color:#555;font-size:16px;line-height:1.8;">
-        Nous sommes ravis de vous accueillir dans la communauté <strong style="color:#1a1008;">AfroStyle</strong> —
-        l\'atelier de mode africaine contemporaine alliant tradition, luxe et avant-garde.
+      <h2 style="margin:0 0 20px;color:#1a1008;font-family:Georgia,serif;font-size:26px;font-weight:400;">Bonjour ' . $fullName . ',</h2>
+      <p style="margin:0 0 16px;color:#555;font-size:15px;line-height:1.8;">
+        Nous sommes ravis de vous accueillir chez <strong style="color:#1a1008;">AfroStyle78</strong> —
+        spécialiste de la mode africaine sur-mesure, basé à Guyancourt (78).
+      </p>
+      <p style="margin:0 0 28px;color:#555;font-size:15px;line-height:1.8;">
+        Votre compte est actif. Explorez nos collections, passez des commandes sur-mesure et suivez vos créations en temps réel.
       </p>
 
-      <p style="margin:0 0 32px;color:#555;font-size:16px;line-height:1.8;">
-        Votre compte est maintenant actif. Vous pouvez dès à présent explorer nos collections,
-        passer des commandes sur-mesure et suivre vos créations en temps réel.
-      </p>
-
-      <!-- DIVIDER -->
-      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
-        <tr>
-          <td style="border-top:1px solid rgba(200,146,26,0.3);height:1px;"></td>
-          <td style="padding:0 16px;white-space:nowrap;color:#c8921a;font-size:14px;">✦</td>
-          <td style="border-top:1px solid rgba(200,146,26,0.3);height:1px;"></td>
-        </tr>
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+        <tr><td style="padding:10px 0;border-bottom:1px solid #f0ebe0;"><span style="color:#c8921a;margin-right:10px;">✦</span><span style="color:#333;font-size:14px;">Collections exclusives — Bazin, Kente, Wax premium</span></td></tr>
+        <tr><td style="padding:10px 0;border-bottom:1px solid #f0ebe0;"><span style="color:#c8921a;margin-right:10px;">✦</span><span style="color:#333;font-size:14px;">Confection sur-mesure disponible sur tous les articles</span></td></tr>
+        <tr><td style="padding:10px 0;border-bottom:1px solid #f0ebe0;"><span style="color:#c8921a;margin-right:10px;">✦</span><span style="color:#333;font-size:14px;">Suivi de commande en temps réel</span></td></tr>
+        <tr><td style="padding:10px 0;"><span style="color:#c8921a;margin-right:10px;">✦</span><span style="color:#333;font-size:14px;">Livraison France & International</span></td></tr>
       </table>
 
-      <!-- AVANTAGES -->
-      <p style="margin:0 0 20px;color:#1a1008;font-size:13px;letter-spacing:2px;text-transform:uppercase;font-weight:bold;">Ce qui vous attend</p>
-
-      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:36px;">
-        <tr>
-          <td style="padding:12px 0;border-bottom:1px solid #f0ebe0;">
-            <span style="color:#c8921a;font-size:18px;margin-right:12px;">✦</span>
-            <span style="color:#333;font-size:15px;">Collections exclusives — Bazin, Kente, Wax premium</span>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:12px 0;border-bottom:1px solid #f0ebe0;">
-            <span style="color:#c8921a;font-size:18px;margin-right:12px;">✦</span>
-            <span style="color:#333;font-size:15px;">Confection sur-mesure disponible sur tous les articles</span>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:12px 0;border-bottom:1px solid #f0ebe0;">
-            <span style="color:#c8921a;font-size:18px;margin-right:12px;">✦</span>
-            <span style="color:#333;font-size:15px;">Suivi de commande en temps réel</span>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:12px 0;">
-            <span style="color:#c8921a;font-size:18px;margin-right:12px;">✦</span>
-            <span style="color:#333;font-size:15px;">Livraison à Dakar et dans toutes les régions</span>
-          </td>
-        </tr>
-      </table>
-
-      <!-- CTA -->
-      <table width="100%" cellpadding="0" cellspacing="0">
-        <tr>
-          <td align="center">
-            <a href="' . SITE_URL . '/boutique.php"
-               style="display:inline-block;background:#c8921a;color:#1a1008;text-decoration:none;
-                      font-size:13px;font-weight:bold;letter-spacing:3px;text-transform:uppercase;
-                      padding:16px 48px;">
-              Explorer les collections
-            </a>
-          </td>
-        </tr>
-      </table>
-
+      <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
+        <a href="' . SITE_URL . '/boutique"
+           style="display:inline-block;background:#c8921a;color:#1a1008;text-decoration:none;
+                  font-size:13px;font-weight:bold;letter-spacing:3px;text-transform:uppercase;padding:16px 48px;">
+          Explorer les collections
+        </a>
+      </td></tr></table>
     </td>
   </tr>
 
   <!-- FOOTER -->
   <tr>
-    <td style="background:#1a1008;padding:32px 48px;text-align:center;">
-      <p style="margin:0 0 8px;color:#c8921a;font-size:12px;letter-spacing:2px;">AfroStyle Atelier</p>
-      <p style="margin:0 0 4px;color:rgba(245,240,232,0.5);font-size:12px;">📍 Dakar, Sénégal &nbsp;|&nbsp; 📞 +33 6 44 72 87 30</p>
-      <p style="margin:0;color:rgba(245,240,232,0.3);font-size:11px;">© 2024 AfroStyle — Tous droits réservés</p>
+    <td style="background:#1a1008;padding:24px 48px;text-align:center;">
+      <p style="margin:0 0 4px;color:#c8921a;font-size:12px;letter-spacing:2px;">AfroStyle78</p>
+      <p style="margin:0 0 4px;color:rgba(245,240,232,0.5);font-size:11px;">Guyancourt, Yvelines (78) &nbsp;|&nbsp; +33 6 44 72 87 30</p>
+      <p style="margin:0;color:rgba(245,240,232,0.3);font-size:10px;">© 2025 AfroStyle78 — Tous droits réservés</p>
     </td>
   </tr>
 
 </table>
 </td></tr>
 </table>
-
 </body>
 </html>';
 
-    $embeds = file_exists($logoPath) ? ['afrostyle_logo' => $logoPath] : [];
-    return sendMail($email, $firstName, $subject, $html, $embeds);
+    return sendMail($email, $firstName, $subject, $html);
 }
 
 // ─── EMAIL CONFIRMATION DE COMMANDE ───────────────────────────────────────────
