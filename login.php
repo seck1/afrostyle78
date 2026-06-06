@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['customer_name']  = $customer['first_name'];
             $_SESSION['customer_email'] = $customer['email'];
 
-            $redirect = $_SESSION['redirect_after_login'] ?? SITE_URL . '/compte.php';
+            $redirect = $_SESSION['redirect_after_login'] ?? SITE_URL . '/';
             unset($_SESSION['redirect_after_login']);
             header('Location: ' . $redirect);
             exit;
