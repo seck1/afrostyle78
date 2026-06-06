@@ -4,22 +4,43 @@ require_once '../config/database.php';
 
 if (isset($_SESSION['admin_id'])) { header('Location: ' . ADMIN_URL . '/index.php'); exit; }
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = trim($_POST['username'] ?? '');
-    $password = $_POST['password'] ?? '';
-
-    $stmt = getDB()->prepare("SELECT * FROM admins WHERE username = ? OR email = ?");
-    $stmt->execute([$username, $username]);
-    $admin = $stmt->fetch();
-
-    if ($admin && password_verify($password, $admin['password'])) {
-        $_SESSION['admin_id'] = $admin['id'];
-        $_SESSION['admin_username'] = $admin['username'];
-        header('Location: ' . ADMIN_URL . '/index.php');
-        exit;
+    // CSRF check
+    if (empty($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        $error = 'Requête invalide.';
     } else {
-        $error = 'Identifiants incorrects.';
+        // Rate limiting : 5 tentatives max / 15 min / IP
+        $ipKey = 'admin_login_' . md5($_SERVER['REMOTE_ADDR'] ?? '');
+        if (!isset($_SESSION[$ipKey])) $_SESSION[$ipKey] = ['count' => 0, 'first' => time()];
+        if (time() - $_SESSION[$ipKey]['first'] > 900) $_SESSION[$ipKey] = ['count' => 0, 'first' => time()];
+
+        if ($_SESSION[$ipKey]['count'] >= 5) {
+            $error = 'Trop de tentatives. Réessayez dans 15 minutes.';
+        } else {
+            $_SESSION[$ipKey]['count']++;
+            $username = trim($_POST['username'] ?? '');
+            $password = $_POST['password'] ?? '';
+
+            $stmt = getDB()->prepare("SELECT * FROM admins WHERE username = ? OR email = ?");
+            $stmt->execute([$username, $username]);
+            $admin = $stmt->fetch();
+
+            if ($admin && password_verify($password, $admin['password'])) {
+                session_regenerate_id(true);
+                unset($_SESSION[$ipKey]);
+                $_SESSION['admin_id']       = $admin['id'];
+                $_SESSION['admin_username'] = $admin['username'];
+                header('Location: ' . ADMIN_URL . '/index.php');
+                exit;
+            } else {
+                $error = 'Identifiants incorrects.';
+            }
+        }
     }
 }
 ?>
@@ -60,6 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <p class="login-sub">Panneau de gestion AfroStyle</p>
     <?php if($error): ?><div class="error"><?= htmlspecialchars($error) ?></div><?php endif; ?>
     <form method="POST">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
         <div class="form-group">
             <label>Identifiant</label>
             <input type="text" name="username" autofocus required placeholder="admin">

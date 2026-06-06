@@ -1,4 +1,19 @@
 Options -MultiViews
+
+# Block direct access to sensitive directories
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /
+RewriteRule ^config/ - [F,L]
+RewriteRule ^includes/ - [F,L]
+RewriteRule ^vendor/ - [F,L]
+</IfModule>
+
+# Block access to sensitive file types
+<FilesMatch "\.(env|log|sql|bak|sh)$">
+    Require all denied
+</FilesMatch>
+
 RewriteEngine On
 RewriteBase /
 

@@ -7,6 +7,10 @@ require_once 'config/mailer.php';
 $cart = $_SESSION['cart'] ?? [];
 if (empty($cart)) { header('Location: panier.php'); exit; }
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 $db = getDB();
 $errors = [];
 $subtotal = array_sum(array_map(fn($i) => $i['price'] * $i['quantity'], $cart));
@@ -79,6 +83,9 @@ if (!empty($_SESSION['customer_id']) && !empty($prefill['country'])) {
 $_SESSION['detected_country'] = $detectedCountry;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (empty($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        $errors[] = 'Requête invalide. Veuillez recharger la page.';
+    }
     $firstName = trim($_POST['first_name'] ?? '');
     $lastName  = trim($_POST['last_name'] ?? '');
     $email     = trim($_POST['email'] ?? '');
@@ -199,6 +206,7 @@ $total = $subtotal + $delivery;
     <?php endif; ?>
 
     <form method="POST" action="">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
         <div class="checkout-grid">
             <!-- FORM -->
             <div>

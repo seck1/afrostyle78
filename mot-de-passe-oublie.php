@@ -9,8 +9,15 @@ $success  = '';
 $step     = isset($_GET['token']) ? 2 : 1;
 $token    = trim($_GET['token'] ?? '');
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 // ─── STEP 2 POST : Reset password ────────────────────────────────────────────
 if ($step === 2 && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (empty($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        $errors[] = 'Requête invalide.';
+    } else
     $token       = trim($_POST['token'] ?? '');
     $password    = $_POST['password'] ?? '';
     $passwordCfm = $_POST['password_confirm'] ?? '';
@@ -41,6 +48,17 @@ if ($step === 2 && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // ─── STEP 1 POST : Send reset email ──────────────────────────────────────────
 if ($step === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (empty($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        $errors[] = 'Requête invalide.';
+    } else {
+    // Rate limit : 3 demandes / heure / IP
+    $rlKey = 'pwreset_' . md5($_SERVER['REMOTE_ADDR'] ?? '');
+    if (!isset($_SESSION[$rlKey])) $_SESSION[$rlKey] = ['count' => 0, 'first' => time()];
+    if (time() - $_SESSION[$rlKey]['first'] > 3600) $_SESSION[$rlKey] = ['count' => 0, 'first' => time()];
+    if ($_SESSION[$rlKey]['count'] >= 3) {
+        $errors[] = 'Trop de demandes. Réessayez dans 1 heure.';
+    } else {
+        $_SESSION[$rlKey]['count']++;
     $email = trim($_POST['email'] ?? '');
 
     if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -139,6 +157,8 @@ if ($step === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $success = 'Si un compte existe avec cette adresse email, vous recevrez un lien de réinitialisation dans quelques minutes.';
         }
     }
+    } // end rate limit else
+    } // end csrf else
 }
 ?>
 
@@ -171,6 +191,7 @@ if ($step === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <?php if (!$success && $step === 1): ?>
         <form method="POST" class="auth-form">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
             <div class="form-group">
                 <label>Adresse email *</label>
                 <input type="email" name="email" value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
@@ -185,6 +206,7 @@ if ($step === 1 && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <?php if ($step === 2 && empty($success)): ?>
         <form method="POST" class="auth-form">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
             <input type="hidden" name="token" value="<?= htmlspecialchars($token) ?>">
 
             <div class="form-group">

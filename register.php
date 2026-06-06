@@ -7,7 +7,25 @@ require_once 'config/mailer.php';
 $errors = [];
 $success = false;
 
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // CSRF
+    if (empty($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        $errors[] = 'Requête invalide.';
+    }
+    // Rate limit : 3 inscriptions / heure / IP
+    $ipKey = 'reg_' . md5($_SERVER['REMOTE_ADDR'] ?? '');
+    if (!isset($_SESSION[$ipKey])) $_SESSION[$ipKey] = ['count' => 0, 'first' => time()];
+    if (time() - $_SESSION[$ipKey]['first'] > 3600) $_SESSION[$ipKey] = ['count' => 0, 'first' => time()];
+    if ($_SESSION[$ipKey]['count'] >= 3) {
+        $errors[] = 'Trop d\'inscriptions. Réessayez dans 1 heure.';
+    } else {
+        $_SESSION[$ipKey]['count']++;
+    }
+
     $firstName = trim($_POST['first_name'] ?? '');
     $lastName  = trim($_POST['last_name'] ?? '');
     $email     = trim($_POST['email'] ?? '');
@@ -18,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$firstName) $errors[] = 'Le prénom est requis.';
     if (!$lastName)  $errors[] = 'Le nom est requis.';
     if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Adresse email invalide.';
-    if (strlen($password) < 6) $errors[] = 'Le mot de passe doit contenir au moins 6 caractères.';
+    if (strlen($password) < 8) $errors[] = 'Le mot de passe doit contenir au moins 8 caractères.';
     if ($password !== $confirm) $errors[] = 'Les mots de passe ne correspondent pas.';
 
     if (empty($errors)) {
@@ -66,6 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
 
         <form method="POST" class="auth-form">
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
             <div class="auth-row">
                 <div class="form-group">
                     <label>Prénom *</label>
