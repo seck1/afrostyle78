@@ -2976,3 +2976,8 @@ body {
 @media (max-width: 768px) {
   .histoire-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
 }
+
+@media (max-width: 768px) {
+  .trust-badges-grid { display: grid !important; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+  .trust-badges-grid > div { justify-content: flex-start; }
+}
