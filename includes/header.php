@@ -145,15 +145,14 @@ $categories = $db->query("SELECT * FROM categories ORDER BY name")->fetchAll();
     <ul>
         <li><a href="<?= SITE_URL ?>">Accueil</a></li>
 
-        <!-- Collections avec sous-menu accordéon -->
-        <li class="mobile-has-submenu" id="mobileCollections">
-            <div class="mobile-menu-toggle">
-                <a href="<?= SITE_URL ?>/boutique">Collections</a>
-                <button type="button" class="mobile-submenu-icon" id="mobileCollectionsBtn" onclick="toggleMobileSubmenu('mobileCollections')" aria-label="Afficher les collections">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polyline points="6 9 12 15 18 9"/></svg>
-                </button>
-            </div>
-            <ul class="mobile-submenu" id="mobileCollectionsMenu">
+        <!-- Collections avec sous-menu accordéon CSS pur -->
+        <li class="mobile-has-submenu">
+            <input type="checkbox" id="mob-collections-toggle" class="mobile-submenu-check">
+            <label for="mob-collections-toggle" class="mobile-menu-toggle">
+                <span class="mobile-menu-label">Collections</span>
+                <svg class="mobile-submenu-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polyline points="6 9 12 15 18 9"/></svg>
+            </label>
+            <ul class="mobile-submenu">
                 <li><a href="<?= SITE_URL ?>/boutique" class="sub-link">✦ Toutes les collections</a></li>
                 <?php foreach($categories as $cat): ?>
                 <li><a href="<?= SITE_URL ?>/boutique?cat=<?= $cat['slug'] ?>" class="sub-link"><?= htmlspecialchars($cat['name']) ?></a></li>
