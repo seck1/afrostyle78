@@ -2991,3 +2991,45 @@ body {
   .trust-badges-grid > div svg { width: 16px !important; height: 16px !important; flex-shrink: 0; }
   .trust-badges-grid > div svg[viewBox="0 0 750 471"] { width: 52px !important; height: 34px !important; }
 }
+
+/* Mobile menu accordéon Collections */
+.mobile-has-submenu .mobile-menu-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.mobile-menu-toggle a {
+  flex: 1;
+  padding: 16px 0;
+  color: rgba(253,246,236,0.9);
+  text-decoration: none;
+  font-size: 1.3rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+.mobile-submenu-icon {
+  background: none;
+  border: none;
+  color: var(--gold);
+  cursor: pointer;
+  padding: 16px 0 16px 16px;
+  transition: transform 0.3s;
+  display: flex;
+  align-items: center;
+}
+.mobile-submenu-icon.open { transform: rotate(180deg); }
+.mobile-submenu {
+  display: none;
+  padding-left: 16px;
+  border-left: 2px solid rgba(200,146,26,0.3);
+  margin: 0 0 8px;
+}
+.mobile-submenu.open { display: block; }
+.mobile-submenu li { border-bottom: none !important; }
+.mobile-submenu li a {
+  padding: 10px 0;
+  font-size: 1.05rem;
+  color: rgba(253,246,236,0.65);
+  display: block;
+}
+.mobile-submenu li a:hover { color: var(--gold); }

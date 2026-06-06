@@ -144,19 +144,32 @@ $categories = $db->query("SELECT * FROM categories ORDER BY name")->fetchAll();
     <button class="mobile-close" onclick="toggleMobileMenu()">✕</button>
     <ul>
         <li><a href="<?= SITE_URL ?>">Accueil</a></li>
-        <li><a href="<?= SITE_URL ?>/boutique.php">Collections</a></li>
-        <?php foreach($categories as $cat): ?>
-        <li><a href="<?= SITE_URL ?>/boutique.php?cat=<?= $cat['slug'] ?>" class="sub-link"><?= htmlspecialchars($cat['name']) ?></a></li>
-        <?php endforeach; ?>
-        <li><a href="<?= SITE_URL ?>/sur-mesure.php">Sur-Mesure</a></li>
-        <li><a href="<?= SITE_URL ?>/suivi.php">Suivi commande</a></li>
-        <li><a href="<?= SITE_URL ?>/panier.php">Panier (<?= $cartCount ?>)</a></li>
+
+        <!-- Collections avec sous-menu accordéon -->
+        <li class="mobile-has-submenu">
+            <div class="mobile-menu-toggle" onclick="toggleMobileSubmenu(this)">
+                <a href="<?= SITE_URL ?>/boutique">Collections</a>
+                <button type="button" class="mobile-submenu-icon" aria-label="Afficher les collections">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>
+            </div>
+            <ul class="mobile-submenu">
+                <li><a href="<?= SITE_URL ?>/boutique" class="sub-link">✦ Toutes les collections</a></li>
+                <?php foreach($categories as $cat): ?>
+                <li><a href="<?= SITE_URL ?>/boutique?cat=<?= $cat['slug'] ?>" class="sub-link"><?= htmlspecialchars($cat['name']) ?></a></li>
+                <?php endforeach; ?>
+            </ul>
+        </li>
+
+        <li><a href="<?= SITE_URL ?>/sur-mesure">Sur-Mesure</a></li>
+        <li><a href="<?= SITE_URL ?>/suivi">Suivi commande</a></li>
+        <li><a href="<?= SITE_URL ?>/panier">Panier (<?= $cartCount ?>)</a></li>
         <?php if (!empty($_SESSION['customer_id'])): ?>
-        <li><a href="<?= SITE_URL ?>/compte.php#commandes">Mes commandes</a></li>
-        <li><a href="<?= SITE_URL ?>/compte.php">Mon compte</a></li>
+        <li><a href="<?= SITE_URL ?>/compte#commandes">Mes commandes</a></li>
+        <li><a href="<?= SITE_URL ?>/compte">Mon compte</a></li>
         <?php else: ?>
-        <li><a href="<?= SITE_URL ?>/login.php">Connexion</a></li>
-        <li><a href="<?= SITE_URL ?>/register.php" style="color:var(--gold);">Créer un compte</a></li>
+        <li><a href="<?= SITE_URL ?>/login">Connexion</a></li>
+        <li><a href="<?= SITE_URL ?>/register" style="color:var(--gold);">Créer un compte</a></li>
         <?php endif; ?>
     </ul>
 </div>
