@@ -1,5 +1,44 @@
 </main>
 
+<!-- BANNIÈRE RGPD COOKIES -->
+<div id="cookie-banner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:99999;background:#1a1008;border-top:2px solid #c8921a;padding:16px 24px;box-shadow:0 -4px 24px rgba(0,0,0,0.3);">
+    <div style="max-width:1200px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:16px;justify-content:space-between;">
+        <div style="flex:1;min-width:260px;">
+            <p style="margin:0 0 4px;color:#f5f0e8;font-size:0.82rem;font-weight:700;letter-spacing:0.05em;">🍪 Ce site utilise des cookies</p>
+            <p style="margin:0;color:rgba(245,240,232,0.65);font-size:0.75rem;line-height:1.6;">
+                Nous utilisons des cookies essentiels au fonctionnement du site (session, panier, sécurité).
+                Conformément au <strong style="color:#c8921a;">RGPD</strong> et à la réglementation <strong style="color:#c8921a;">CNIL</strong>,
+                aucun cookie publicitaire ou de tracking n'est utilisé sans votre consentement.
+            </p>
+        </div>
+        <div style="display:flex;gap:10px;flex-shrink:0;flex-wrap:wrap;">
+            <button onclick="acceptCookies()" style="background:#c8921a;color:#1a1008;border:none;padding:10px 20px;font-size:0.78rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;">
+                Accepter
+            </button>
+            <button onclick="rejectCookies()" style="background:transparent;color:rgba(245,240,232,0.6);border:1px solid rgba(245,240,232,0.2);padding:10px 20px;font-size:0.78rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;">
+                Cookies essentiels uniquement
+            </button>
+            <a href="/politique-confidentialite" style="color:rgba(245,240,232,0.4);font-size:0.72rem;text-decoration:underline;align-self:center;">En savoir plus</a>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    if (!localStorage.getItem('cookie_consent')) {
+        document.getElementById('cookie-banner').style.display = 'block';
+    }
+})();
+function acceptCookies() {
+    localStorage.setItem('cookie_consent', 'accepted');
+    document.getElementById('cookie-banner').style.display = 'none';
+}
+function rejectCookies() {
+    localStorage.setItem('cookie_consent', 'essential');
+    document.getElementById('cookie-banner').style.display = 'none';
+}
+</script>
+
 <!-- BOUTON WHATSAPP FLOTTANT -->
 <a href="https://wa.me/33644728730?text=Bonjour%20AfroStyle78%2C%20je%20souhaite%20avoir%20des%20informations%20sur%20vos%20cr%C3%A9ations."
    target="_blank" rel="noopener" class="whatsapp-float" aria-label="Contacter sur WhatsApp">
