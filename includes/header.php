@@ -114,8 +114,10 @@ $categories = $db->query("SELECT * FROM categories ORDER BY name")->fetchAll();
     function setHeaderHeight() {
         var topbar = document.querySelector('.topbar');
         var navbar = document.querySelector('.navbar');
-        var h = (topbar ? topbar.offsetHeight : 0) + (navbar ? navbar.offsetHeight : 0);
-        document.documentElement.style.setProperty('--header-height', h + 'px');
+        var th = topbar ? topbar.offsetHeight : 37;
+        var nh = navbar ? navbar.offsetHeight : 64;
+        document.documentElement.style.setProperty('--topbar-height', th + 'px');
+        document.documentElement.style.setProperty('--header-height', (th + nh) + 'px');
     }
     setHeaderHeight();
     window.addEventListener('resize', setHeaderHeight);

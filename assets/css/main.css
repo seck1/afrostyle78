@@ -62,7 +62,14 @@ body {
   padding: 8px 0;
   overflow: hidden;
   white-space: nowrap;
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 999;
+}
+.navbar {
+  top: var(--topbar-height, 37px);
 }
 .topbar-track {
   display: inline-flex;
