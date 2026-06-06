@@ -47,11 +47,11 @@ function toggleMobileMenu() {
   document.body.style.overflow = menu.classList.contains('open') ? 'hidden' : '';
 }
 
-function toggleMobileSubmenu(el) {
-  const submenu = el.nextElementSibling;
-  const icon    = el.querySelector('.mobile-submenu-icon');
+function toggleMobileSubmenu(id) {
+  const submenu = document.getElementById(id + 'Menu');
+  const btn     = document.getElementById(id + 'Btn');
   if (submenu) submenu.classList.toggle('open');
-  if (icon)    icon.classList.toggle('open');
+  if (btn)     btn.classList.toggle('open');
 }
 
 // Search overlay

@@ -146,14 +146,14 @@ $categories = $db->query("SELECT * FROM categories ORDER BY name")->fetchAll();
         <li><a href="<?= SITE_URL ?>">Accueil</a></li>
 
         <!-- Collections avec sous-menu accordéon -->
-        <li class="mobile-has-submenu">
-            <div class="mobile-menu-toggle" onclick="toggleMobileSubmenu(this)">
+        <li class="mobile-has-submenu" id="mobileCollections">
+            <div class="mobile-menu-toggle">
                 <a href="<?= SITE_URL ?>/boutique">Collections</a>
-                <button type="button" class="mobile-submenu-icon" aria-label="Afficher les collections">
+                <button type="button" class="mobile-submenu-icon" id="mobileCollectionsBtn" onclick="toggleMobileSubmenu('mobileCollections')" aria-label="Afficher les collections">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polyline points="6 9 12 15 18 9"/></svg>
                 </button>
             </div>
-            <ul class="mobile-submenu">
+            <ul class="mobile-submenu" id="mobileCollectionsMenu">
                 <li><a href="<?= SITE_URL ?>/boutique" class="sub-link">✦ Toutes les collections</a></li>
                 <?php foreach($categories as $cat): ?>
                 <li><a href="<?= SITE_URL ?>/boutique?cat=<?= $cat['slug'] ?>" class="sub-link"><?= htmlspecialchars($cat['name']) ?></a></li>
