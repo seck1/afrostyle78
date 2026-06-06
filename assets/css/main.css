@@ -2470,7 +2470,7 @@ body {
   .process-step::after { display: none; }
 }
 @media (max-width: 640px) {
-  .occasion-grid { grid-template-columns: repeat(2, 1fr); }
+  .occasion-grid { grid-template-columns: 1fr; }
   .occasion-card { padding: 8px 10px; display: flex; flex-direction: column; }
   .occasion-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
   .occasion-icon { width: 24px; height: 24px; margin-bottom: 0; flex-shrink: 0; }
