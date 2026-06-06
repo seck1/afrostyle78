@@ -17,31 +17,32 @@ if (empty($_SESSION['csrf_token'])) {
 if ($step === 2 && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
         $errors[] = 'Requête invalide.';
-    } else
-    $token       = trim($_POST['token'] ?? '');
-    $password    = $_POST['password'] ?? '';
-    $passwordCfm = $_POST['password_confirm'] ?? '';
-
-    if (!$token) {
-        $errors[] = 'Lien de réinitialisation invalide.';
-    } elseif (strlen($password) < 8) {
-        $errors[] = 'Le mot de passe doit contenir au moins 8 caractères.';
-    } elseif ($password !== $passwordCfm) {
-        $errors[] = 'Les mots de passe ne correspondent pas.';
     } else {
-        $db   = getDB();
-        $stmt = $db->prepare("SELECT id FROM customers WHERE reset_token = ? AND reset_token_expires > NOW()");
-        $stmt->execute([$token]);
-        $customer = $stmt->fetch();
+        $token       = trim($_POST['token'] ?? '');
+        $password    = $_POST['password'] ?? '';
+        $passwordCfm = $_POST['password_confirm'] ?? '';
 
-        if (!$customer) {
-            $errors[] = 'Ce lien est invalide ou a expiré. Veuillez faire une nouvelle demande.';
+        if (!$token) {
+            $errors[] = 'Lien de réinitialisation invalide.';
+        } elseif (strlen($password) < 8) {
+            $errors[] = 'Le mot de passe doit contenir au moins 8 caractères.';
+        } elseif ($password !== $passwordCfm) {
+            $errors[] = 'Les mots de passe ne correspondent pas.';
         } else {
-            $hash = password_hash($password, PASSWORD_DEFAULT);
-            $upd  = $db->prepare("UPDATE customers SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?");
-            $upd->execute([$hash, $customer['id']]);
-            $success = 'Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter.';
-            $step    = 0; // show only success
+            $db   = getDB();
+            $stmt = $db->prepare("SELECT id FROM customers WHERE reset_token = ? AND reset_token_expires > NOW()");
+            $stmt->execute([$token]);
+            $customer = $stmt->fetch();
+
+            if (!$customer) {
+                $errors[] = 'Ce lien est invalide ou a expiré. Veuillez faire une nouvelle demande.';
+            } else {
+                $hash = password_hash($password, PASSWORD_DEFAULT);
+                $upd  = $db->prepare("UPDATE customers SET password_hash = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?");
+                $upd->execute([$hash, $customer['id']]);
+                $success = 'Votre mot de passe a été réinitialisé avec succès. Vous pouvez maintenant vous connecter.';
+                $step    = 0;
+            }
         }
     }
 }
