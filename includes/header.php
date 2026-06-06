@@ -109,6 +109,19 @@ $categories = $db->query("SELECT * FROM categories ORDER BY name")->fetchAll();
     </div>
 </nav>
 
+<script>
+(function() {
+    function setHeaderHeight() {
+        var topbar = document.querySelector('.topbar');
+        var navbar = document.querySelector('.navbar');
+        var h = (topbar ? topbar.offsetHeight : 0) + (navbar ? navbar.offsetHeight : 0);
+        document.documentElement.style.setProperty('--header-height', h + 'px');
+    }
+    setHeaderHeight();
+    window.addEventListener('resize', setHeaderHeight);
+})();
+</script>
+
 <!-- BARRE AUTH MOBILE (visible uniquement sur mobile si non connecté) -->
 <?php if (empty($_SESSION['customer_id'])): ?>
 <div class="mobile-auth-bar" id="mobileAuthBar">

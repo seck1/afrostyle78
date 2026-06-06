@@ -81,8 +81,10 @@ body {
 
 /* NAVBAR */
 .navbar {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 1000;
   background: var(--cream);
   border-bottom: 1px solid rgba(200,146,26,0.2);
@@ -372,7 +374,7 @@ body {
 }
 
 /* MAIN CONTENT */
-.main-content { min-height: 60vh; }
+.main-content { min-height: 60vh; padding-top: var(--header-height, 104px); }
 .main-content:has(.compte-section) { padding: 0; margin: 0; }
 
 /* ============ HERO ============ */
