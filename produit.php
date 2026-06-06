@@ -12,21 +12,26 @@ $product = $stmt->fetch();
 if (!$product) { header('Location: boutique.php'); exit; }
 
 $pageTitle = $product['name'];
-$sizes = json_decode($product['available_sizes'] ?? '[]', true);
+$sizes  = json_decode($product['available_sizes']  ?? '[]', true);
+$colors = json_decode($product['available_colors'] ?? '[]', true);
 $images = json_decode($product['images'] ?? '[]', true);
-$price = $product['promo_price'] ?: $product['price'];
+$price  = $product['promo_price'] ?: $product['price'];
 
 // Cart action
 $cartMsg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
-    $selectedSize = trim($_POST['selected_size'] ?? '');
-    $qty = max(1, (int)($_POST['quantity'] ?? 1));
+    $selectedSize     = trim($_POST['selected_size'] ?? '');
+    $selectedColor    = trim($_POST['selected_color'] ?? '');
+    $selectedColorHex = trim($_POST['selected_color_hex'] ?? '');
+    $qty      = max(1, (int)($_POST['quantity'] ?? 1));
     $isCustom = isset($_POST['is_custom_measure']) && $_POST['is_custom_measure'] == '1';
 
     if (!$selectedSize && !$isCustom) {
         $cartMsg = '<div class="alert alert-error">Veuillez choisir une taille.</div>';
+    } elseif (!empty($colors) && !$selectedColor) {
+        $cartMsg = '<div class="alert alert-error">Veuillez choisir une couleur.</div>';
     } else {
-        $cartKey = $product['id'] . '_' . ($selectedSize ?: 'SUR-MESURE');
+        $cartKey = $product['id'] . '_' . ($selectedSize ?: 'SUR-MESURE') . ($selectedColor ? '_' . preg_replace('/[^a-z0-9]/', '', strtolower($selectedColor)) : '');
         if (!isset($_SESSION['cart'])) $_SESSION['cart'] = [];
 
         $measurements = null;
@@ -49,12 +54,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_to_cart'])) {
         } else {
             $_SESSION['cart'][$cartKey] = [
                 'product_id' => $product['id'],
-                'name' => $product['name'],
-                'price' => $price,
-                'image' => $product['image'],
-                'size' => $selectedSize ?: 'SUR-MESURE',
-                'quantity' => $qty,
-                'is_custom' => $isCustom,
+                'name'       => $product['name'],
+                'price'      => $price,
+                'image'      => $product['image'],
+                'size'       => $selectedSize ?: 'SUR-MESURE',
+                'color'      => $selectedColor,
+                'color_hex'  => $selectedColorHex,
+                'quantity'   => $qty,
+                'is_custom'  => $isCustom,
                 'measurements' => $measurements,
             ];
         }
@@ -127,7 +134,27 @@ $relatedProducts = $related->fetchAll();
                 <form method="POST" action="">
                     <input type="hidden" name="add_to_cart" value="1">
                     <input type="hidden" name="selected_size" id="selected_size" value="">
+                    <input type="hidden" name="selected_color" id="selected_color" value="">
+                    <input type="hidden" name="selected_color_hex" id="selected_color_hex" value="">
                     <input type="hidden" name="is_custom_measure" id="is_custom_measure" value="0">
+
+                    <!-- COLOR SELECTOR -->
+                    <?php if (!empty($colors)): ?>
+                    <div class="size-section" style="margin-bottom:20px;">
+                        <div class="option-label">Couleur <span id="color-label-text">— Choisissez une couleur</span></div>
+                        <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;">
+                            <?php foreach ($colors as $col): ?>
+                            <button type="button" class="color-swatch-btn"
+                                    data-color="<?= htmlspecialchars($col['name']) ?>"
+                                    data-hex="<?= htmlspecialchars($col['hex']) ?>"
+                                    title="<?= htmlspecialchars($col['name']) ?>"
+                                    style="width:36px;height:36px;border-radius:50%;background:<?= htmlspecialchars($col['hex']) ?>;border:2px solid transparent;cursor:pointer;transition:all 0.2s;flex-shrink:0;"
+                                    onclick="selectColor(this)">
+                            </button>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
 
                     <!-- SIZE SELECTOR -->
                     <?php if(!empty($sizes)): ?>
@@ -262,6 +289,28 @@ $relatedProducts = $related->fetchAll();
 </section>
 
 <script>
+// Color selection
+function selectColor(btn) {
+    document.querySelectorAll('.color-swatch-btn').forEach(b => {
+        b.style.border = '2px solid transparent';
+        b.style.transform = 'scale(1)';
+    });
+    btn.style.border = '2px solid #c8921a';
+    btn.style.transform = 'scale(1.2)';
+    document.getElementById('selected_color').value     = btn.dataset.color;
+    document.getElementById('selected_color_hex').value = btn.dataset.hex;
+    document.getElementById('color-label-text').textContent = '— ' + btn.dataset.color;
+}
+
+// Size selection
+document.querySelectorAll('.size-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        document.getElementById('selected_size').value = this.dataset.size;
+    });
+});
+
 function switchMainImage(thumb) {
     const main = document.getElementById('mainImage');
     if (!main) return;

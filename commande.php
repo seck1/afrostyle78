@@ -129,8 +129,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Insert order items
             foreach ($cart as $item) {
-                $stmtItem = $db->prepare("INSERT INTO order_items (order_id, product_id, product_name, size, quantity, unit_price, is_custom_measure) VALUES (?,?,?,?,?,?,?)");
-                $stmtItem->execute([$orderId, $item['product_id'], $item['name'], $item['size'], $item['quantity'], $item['price'], !empty($item['is_custom']) ? 1 : 0]);
+                $stmtItem = $db->prepare("INSERT INTO order_items (order_id, product_id, product_name, size, color, color_hex, quantity, unit_price, is_custom_measure) VALUES (?,?,?,?,?,?,?,?,?)");
+                $stmtItem->execute([$orderId, $item['product_id'], $item['name'], $item['size'], $item['color'] ?? null, $item['color_hex'] ?? null, $item['quantity'], $item['price'], !empty($item['is_custom']) ? 1 : 0]);
                 $itemId = $db->lastInsertId();
 
                 if (!empty($item['is_custom']) && !empty($item['measurements'])) {
@@ -390,6 +390,14 @@ $total = $subtotal + $delivery;
                         <div style="flex:1; min-width:0;">
                             <div style="font-size:0.82rem; font-weight:600; line-height:1.3;"><?= htmlspecialchars($item['name']) ?></div>
                             <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">Taille: <?= htmlspecialchars($item['size']) ?> · Qté: <?= $item['quantity'] ?></div>
+                            <?php if (!empty($item['color'])): ?>
+                            <div style="display:flex;align-items:center;gap:5px;margin-top:3px;">
+                                <?php if (!empty($item['color_hex'])): ?>
+                                <span style="width:12px;height:12px;border-radius:50%;background:<?= htmlspecialchars($item['color_hex']) ?>;border:1px solid rgba(0,0,0,0.2);display:inline-block;"></span>
+                                <?php endif; ?>
+                                <span style="font-size:0.68rem;color:var(--text-muted);"><?= htmlspecialchars($item['color']) ?></span>
+                            </div>
+                            <?php endif; ?>
                             <?php if($item['is_custom']): ?><div style="font-size:0.68rem; color:var(--gold); margin-top:2px;">Sur-mesure ✓</div><?php endif; ?>
                         </div>
                         <div style="font-size:0.85rem; font-weight:700; white-space:nowrap;"><?= number_format($item['price'] * $item['quantity'], 0, ',', ' ') ?></div>
