@@ -554,7 +554,7 @@ $catAllImage = $db->query("SELECT setting_value FROM settings WHERE setting_key=
                     <div style="font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;color:rgba(245,240,232,0.5);margin-top:6px;">Fait à la main</div>
                 </div>
                 <div style="background:rgba(200,146,26,0.08);border:1px solid rgba(200,146,26,0.2);padding:28px 20px;text-align:center;">
-                    <div style="font-size:2rem;font-weight:800;color:#c8921a;">🌍</div>
+                    <div style="font-size:2rem;font-weight:800;color:#c8921a;display:flex;justify-content:center;"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#c8921a" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg></div>
                     <div style="font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;color:rgba(245,240,232,0.5);margin-top:6px;">Livraison mondiale</div>
                 </div>
             </div>
