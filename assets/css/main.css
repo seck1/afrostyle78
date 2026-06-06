@@ -1572,7 +1572,7 @@ body {
 .footer-inner {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 56px 40px 40px;
+  padding: 32px 40px 24px;
   display: grid;
   grid-template-columns: 2fr 1fr 1fr 1fr;
   gap: 60px;
