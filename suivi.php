@@ -6,6 +6,7 @@ require_once 'includes/header.php';
 $db = getDB();
 $order = null;
 $tracking = [];
+$orderItems = [];
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' || isset($_GET['order']) || isset($_GET['ref'])) {
